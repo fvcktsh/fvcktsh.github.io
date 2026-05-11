@@ -1,21 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Full Grasshopper Web Engine</title>
+<meta charset="utf-8">
+<title>LIVE STUDIO DASHBOARD</title>
 
 <style>
 body{
   margin:0;
-  overflow:hidden;
-  font-family: ui-monospace, monospace;
-  background:#0b0b0b;
+  font-family:ui-monospace, monospace;
+  background:#0a0a0a;
   color:#fff;
 }
 
-#ui{
+#layout{
   display:grid;
-  grid-template-columns:240px 1fr 300px;
+  grid-template-columns:260px 1fr 300px;
   height:100vh;
 }
 
@@ -25,26 +24,23 @@ body{
   padding:10px;
 }
 
-.nodeBtn{
+.repo{
   padding:8px;
   border:1px solid #333;
   margin-bottom:6px;
   cursor:pointer;
 }
-.nodeBtn:hover{ background:#111; }
 
 /* CENTER */
 #center{
   position:relative;
 }
 
-.node{
+/* GRAPH CANVAS */
+canvas{
   position:absolute;
-  width:140px;
-  padding:10px;
-  background:#111;
-  border:1px solid #333;
-  cursor:move;
+  width:100%;
+  height:100%;
 }
 
 /* RIGHT */
@@ -58,48 +54,35 @@ button{
   margin-top:6px;
   padding:8px;
   background:#111;
-  border:1px solid #333;
   color:#fff;
-  cursor:pointer;
+  border:1px solid #333;
 }
-
-canvas{
-  position:absolute;
-  width:100%;
-  height:100%;
-}
-
 </style>
 </head>
 
 <body>
 
-<div id="ui">
+<div id="layout">
 
-<!-- LEFT NODE LIBRARY -->
+<!-- LEFT: REPOS -->
 <div id="left">
-
-<div class="nodeBtn" onclick="addNode('GRID')">GRID</div>
-<div class="nodeBtn" onclick="addNode('ATTRACTOR')">ATTRACTOR</div>
-<div class="nodeBtn" onclick="addNode('EXTRUDE')">EXTRUDE</div>
-
-<button onclick="compute()">COMPUTE</button>
-
+<h3>STUDIO</h3>
+<div id="repos"></div>
 </div>
 
-<!-- CENTER GRAPH -->
+<!-- CENTER: VISUAL SYSTEM -->
 <div id="center">
-<canvas id="c"></canvas>
+<canvas id="canvas"></canvas>
 </div>
 
-<!-- RIGHT EXPORT -->
+<!-- RIGHT: CONTROL -->
 <div id="right">
 
 <h3>FABRICATION</h3>
 
-<button onclick="exportDXF()">EXPORT DXF</button>
-<button onclick="exportSVG()">EXPORT SVG</button>
-<button onclick="exportSTL()">EXPORT STL</button>
+<button onclick="generateGeometry()">GENERATE</button>
+<button onclick="exportDXF()">DXF</button>
+<button onclick="exportSTL()">STL</button>
 
 </div>
 
@@ -108,87 +91,65 @@ canvas{
 <script>
 
 /* =========================
-   DATA SYSTEM
+   GITHUB DATA (SIMULATED)
 ========================= */
 
-let nodes = [];
+let studioState = {
+  repos: [
+    {name:"geometry-core", status:"active"},
+    {name:"node-graph-engine", status:"active"},
+    {name:"fabrication-compiler", status:"build"},
+    {name:"research-atlas", status:"idle"}
+  ]
+};
+
+/* =========================
+   LOAD UI
+========================= */
+
+function loadRepos(){
+
+  const container = document.getElementById("repos");
+
+  studioState.repos.forEach(r=>{
+
+    const div = document.createElement("div");
+    div.className="repo";
+    div.innerHTML = `${r.name}<br><small>${r.status}</small>`;
+
+    container.appendChild(div);
+  });
+}
+
+loadRepos();
+
+/* =========================
+   GEOMETRY SYSTEM
+========================= */
+
 let geometry = [];
 
-/* =========================
-   NODE CREATION
-========================= */
-
-function addNode(type){
-
-  const n = document.createElement("div");
-  n.className = "node";
-  n.innerHTML = type;
-
-  n.style.left = Math.random()*300+"px";
-  n.style.top = Math.random()*200+"px";
-
-  document.getElementById("center").appendChild(n);
-
-  nodes.push({type, el:n});
-
-  drag(n);
-}
-
-/* =========================
-   DRAG SYSTEM
-========================= */
-
-function drag(el){
-
-  let dx,dy,drag=false;
-
-  el.onmousedown=(e)=>{
-    drag=true;
-    dx=e.offsetX;
-    dy=e.offsetY;
-  };
-
-  document.onmousemove=(e)=>{
-    if(drag){
-      el.style.left=(e.pageX-dx)+"px";
-      el.style.top=(e.pageY-dy)+"px";
-    }
-  };
-
-  document.onmouseup=()=>drag=false;
-}
-
-/* =========================
-   CORE COMPUTATION ENGINE
-========================= */
-
-function compute(){
+function generateGeometry(){
 
   geometry = [];
 
-  let size = 200;
-  let density = 10;
+  let size = 150;
+  let density = 12;
 
   for(let x=0;x<size;x+=density){
     for(let y=0;y<size;y+=density){
 
-      let px=x;
-      let py=y;
+      let dx = 75 - x;
+      let dy = 75 - y;
 
-      let cx=100, cy=100;
+      let d = Math.sqrt(dx*dx+dy*dy);
+      let f = 80/(d+1);
 
-      let dx=cx-px;
-      let dy=cy-py;
-
-      let d=Math.sqrt(dx*dx+dy*dy);
-      let f=80/(d+1);
-
-      px += dx*f*0.02;
-      py += dy*f*0.02;
-
-      let pz = Math.sin(d*0.1)*15;
-
-      geometry.push([px,py,pz]);
+      geometry.push([
+        x + dx*f*0.02,
+        y + dy*f*0.02,
+        Math.sin(d*0.1)*10
+      ]);
     }
   }
 
@@ -196,16 +157,16 @@ function compute(){
 }
 
 /* =========================
-   RENDER
+   VISUAL RENDER
 ========================= */
 
 function render(){
 
-  const c=document.getElementById("c");
-  const ctx=c.getContext("2d");
+  const c = document.getElementById("canvas");
+  const ctx = c.getContext("2d");
 
-  c.width=window.innerWidth;
-  c.height=window.innerHeight;
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
 
   ctx.clearRect(0,0,c.width,c.height);
 
@@ -217,7 +178,7 @@ function render(){
 }
 
 /* =========================
-   DXF EXPORT (LASER / CNC)
+   DXF EXPORT
 ========================= */
 
 function exportDXF(){
@@ -243,37 +204,16 @@ LINE
 
   dxf += "0\nENDSEC\n0\nEOF";
 
-  download("fabrication.dxf", dxf);
+  download("studio.dxf", dxf);
 }
 
 /* =========================
-   SVG EXPORT (LASER CUT 2D CLEAN)
-========================= */
-
-function exportSVG(){
-
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg">`;
-
-  for(let i=0;i<geometry.length-1;i++){
-
-    let a=geometry[i];
-    let b=geometry[i+1];
-
-    svg += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="black"/>`;
-  }
-
-  svg += `</svg>`;
-
-  download("fabrication.svg", svg);
-}
-
-/* =========================
-   STL EXPORT (3D PRINT)
+   STL EXPORT
 ========================= */
 
 function exportSTL(){
 
-  let stl = "solid grasshopper\n";
+  let stl = "solid studio\n";
 
   geometry.forEach(p=>{
 
@@ -290,21 +230,21 @@ endfacet
 
   stl += "endsolid";
 
-  download("fabrication.stl", stl);
+  download("studio.stl", stl);
 }
 
 /* =========================
-   DOWNLOAD SYSTEM
+   DOWNLOAD
 ========================= */
 
 function download(name,data){
 
-  let b=new Blob([data],{type:"text/plain"});
-  let u=URL.createObjectURL(b);
+  const blob = new Blob([data],{type:"text/plain"});
+  const url = URL.createObjectURL(blob);
 
-  let a=document.createElement("a");
-  a.href=u;
-  a.download=name;
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
   a.click();
 }
 
