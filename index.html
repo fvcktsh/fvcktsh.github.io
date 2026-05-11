@@ -1,195 +1,247 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Self-Organizing Architectural Lab</title>
+
+<title>Parametric Design System</title>
 
 <style>
-body {
-  margin: 0;
-  overflow: hidden;
-  background: #050505;
-  font-family: Arial;
+
+/* =========================
+   BASE — ENGINEERING STYLE
+========================= */
+
+body{
+  margin:0;
+  background:#0b0b0b;
+  color:#eaeaea;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
-#ui {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  color: #aaa;
-  font-size: 12px;
-  letter-spacing: 0.2em;
-  z-index: 10;
+/* =========================
+   LAYOUT (LIKE SOFTWARE UI)
+========================= */
+
+.app{
+  display:grid;
+  grid-template-columns:260px 1fr 320px;
+  height:100vh;
 }
+
+/* =========================
+   LEFT — NODE LIBRARY
+========================= */
+
+.sidebar{
+  border-right:1px solid #1a1a1a;
+  padding:1.5rem;
+}
+
+.sidebar h1{
+  font-size:12px;
+  letter-spacing:0.3em;
+  color:#888;
+  margin-bottom:2rem;
+}
+
+.nodeItem{
+  padding:8px;
+  margin-bottom:6px;
+  border:1px solid #1a1a1a;
+  cursor:pointer;
+  font-size:12px;
+}
+
+.nodeItem:hover{
+  background:#111;
+}
+
+/* =========================
+   CENTER — NODE CANVAS
+========================= */
+
+.canvas{
+  position:relative;
+  overflow:hidden;
+  background:#0b0b0b;
+}
+
+.node{
+  position:absolute;
+  width:140px;
+  padding:10px;
+  border:1px solid #2a2a2a;
+  background:#111;
+  font-size:11px;
+  cursor:move;
+}
+
+.nodeTitle{
+  font-weight:bold;
+  margin-bottom:6px;
+}
+
+.port{
+  width:8px;
+  height:8px;
+  background:#888;
+  border-radius:50%;
+  position:absolute;
+}
+
+/* inputs / outputs */
+.in{ left:-4px; top:50%; transform:translateY(-50%); }
+.out{ right:-4px; top:50%; transform:translateY(-50%); }
+
+/* =========================
+   RIGHT — PARAMETERS PANEL
+========================= */
+
+.panel{
+  border-left:1px solid #1a1a1a;
+  padding:1.5rem;
+}
+
+.panel h2{
+  font-size:12px;
+  letter-spacing:0.3em;
+  color:#888;
+}
+
+.param{
+  margin-top:20px;
+  font-size:11px;
+}
+
+input[type="range"]{
+  width:100%;
+}
+
+/* =========================
+   CONNECTION LINES
+========================= */
+
+svg{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+}
+
 </style>
+
 </head>
 
 <body>
 
-<div id="ui">
-SELF-ORGANIZING ARCHITECTURAL LAB
+<div class="app">
+
+<!-- LEFT -->
+<div class="sidebar">
+
+<h1>NODES</h1>
+
+<div class="nodeItem" onclick="addNode('Geometry')">Geometry</div>
+<div class="nodeItem" onclick="addNode('Divide Surface')">Divide Surface</div>
+<div class="nodeItem" onclick="addNode('Attractor Field')">Attractor Field</div>
+<div class="nodeItem" onclick="addNode('Extrude')">Extrude</div>
+<div class="nodeItem" onclick="addNode('Simulation')">Simulation</div>
+
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- CENTER -->
+<div class="canvas" id="canvas">
+
+<svg id="svg"></svg>
+
+</div>
+
+<!-- RIGHT -->
+<div class="panel">
+
+<h2>PARAMETERS</h2>
+
+<div class="param">
+Density
+<input type="range" min="1" max="100" value="50">
+</div>
+
+<div class="param">
+Height
+<input type="range" min="1" max="200" value="80">
+</div>
+
+</div>
+
+</div>
 
 <script>
 
 /* =========================
-   SCENE
+   NODE SYSTEM (GRASSHOPPER STYLE)
 ========================= */
 
-const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x050505, 40, 220);
+const canvas = document.getElementById("canvas");
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-camera.position.set(0, 25, 70);
+let nodes = [];
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+function addNode(type){
 
-/* =========================
-   LIGHT
-========================= */
+  const node = document.createElement("div");
+  node.className = "node";
+  node.style.left = Math.random()*500 + "px";
+  node.style.top = Math.random()*400 + "px";
 
-const light = new THREE.PointLight(0xffffff, 1);
-light.position.set(50, 80, 50);
-scene.add(light);
+  node.innerHTML = `
+    <div class="nodeTitle">${type}</div>
+    <div class="port in"></div>
+    <div class="port out"></div>
+  `;
 
-/* =========================
-   ENTITIES (LAB SYSTEM)
-========================= */
+  canvas.appendChild(node);
+  nodes.push(node);
 
-const nodes = [];
-
-const types = ["project","research","system"];
-
-function color(t){
-  if(t==="project") return 0xffffff;
-  if(t==="research") return 0x6666ff;
-  return 0x66ff99;
+  makeDraggable(node);
 }
 
 /* =========================
-   CREATE NODE
+   DRAG SYSTEM
 ========================= */
 
-function createNode(){
+function makeDraggable(el){
 
-  const type = types[Math.floor(Math.random()*3)];
+  let offsetX, offsetY, dragging=false;
 
-  const geo = new THREE.BoxGeometry(2, 2 + Math.random()*10, 2);
-  const mat = new THREE.MeshStandardMaterial({ color: color(type) });
-
-  const mesh = new THREE.Mesh(geo, mat);
-
-  mesh.position.set(
-    (Math.random()-0.5)*160,
-    Math.random()*20,
-    (Math.random()-0.5)*160
-  );
-
-  mesh.userData = {
-    type,
-    vx:(Math.random()-0.5)*0.1,
-    vz:(Math.random()-0.5)*0.1
+  el.onmousedown = (e)=>{
+    dragging=true;
+    offsetX = e.offsetX;
+    offsetY = e.offsetY;
   };
 
-  scene.add(mesh);
-  nodes.push(mesh);
-}
-
-/* =========================
-   INITIAL SYSTEM
-========================= */
-
-for(let i=0;i<100;i++){
-  createNode();
-}
-
-/* =========================
-   SELF-ORGANIZATION RULES
-========================= */
-
-function organize(){
-
-  for(let i=0;i<nodes.length;i++){
-
-    let a = nodes[i];
-
-    for(let j=i+1;j<nodes.length;j++){
-
-      let b = nodes[j];
-
-      let dx = a.position.x - b.position.x;
-      let dz = a.position.z - b.position.z;
-
-      let d = Math.sqrt(dx*dx + dz*dz);
-
-      /* attraction rule (same type clusters) */
-      if(a.userData.type === b.userData.type && d < 40){
-        a.position.x -= dx*0.002;
-        a.position.z -= dz*0.002;
-
-        b.position.x += dx*0.002;
-        b.position.z += dz*0.002;
-      }
-
+  document.onmousemove = (e)=>{
+    if(dragging){
+      el.style.left = (e.pageX - offsetX) + "px";
+      el.style.top = (e.pageY - offsetY) + "px";
     }
+  };
 
-    /* micro motion */
-    a.position.x += a.userData.vx;
-    a.position.z += a.userData.vz;
-
-  }
+  document.onmouseup = ()=>dragging=false;
 }
 
 /* =========================
-   CAMERA CONTROL
+   INIT EXAMPLE GRAPH
 ========================= */
 
-let keys = {};
-
-document.addEventListener("keydown",(e)=>keys[e.key]=true);
-document.addEventListener("keyup",(e)=>keys[e.key]=false);
-
-function move(){
-
-  if(keys["w"]) camera.position.z -= 0.5;
-  if(keys["s"]) camera.position.z += 0.5;
-  if(keys["a"]) camera.position.x -= 0.5;
-  if(keys["d"]) camera.position.x += 0.5;
-
-}
-
-/* =========================
-   LOOP
-========================= */
-
-function animate(){
-
-  requestAnimationFrame(animate);
-
-  move();
-  organize();
-
-  renderer.render(scene, camera);
-}
-
-animate();
-
-/* =========================
-   RESIZE
-========================= */
-
-window.addEventListener("resize",()=>{
-  camera.aspect = window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+addNode("Geometry");
+addNode("Divide Surface");
+addNode("Extrude");
 
 </script>
 
 </body>
+
 </html>
