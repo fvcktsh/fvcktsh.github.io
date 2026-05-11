@@ -2,59 +2,295 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Studio Marty Vanderdonckt</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
+<title>Studio Marty Vanderdonckt</title>
 
-    body{
-      margin:0;
-      background:black;
-      color:white;
-      font-family:Arial, sans-serif;
-    }
+<style>
 
-    .hero{
-      height:100vh;
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-      padding:10vw;
-    }
+/* =========================
+   BASE SYSTEM
+========================= */
 
-    h1{
-      font-size:5rem;
-      margin:0;
-    }
+body{
+  margin:0;
+  background:#0a0a0a;
+  color:#f2f2f2;
+  font-family: Helvetica, Arial, sans-serif;
+  letter-spacing:0.01em;
+}
 
-    p{
-      max-width:600px;
-      font-size:1.2rem;
-      line-height:1.6;
-      margin-top:2rem;
-      color:#cccccc;
-    }
+/* =========================
+   HEADER / HERO
+========================= */
 
-  </style>
+.hero{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  padding:8vw;
+  border-bottom:1px solid #1c1c1c;
+}
+
+.hero h1{
+  font-size:4vw;
+  font-weight:200;
+  margin:0;
+}
+
+.hero p{
+  max-width:600px;
+  margin-top:2rem;
+  font-size:1.1rem;
+  line-height:1.6;
+  color:#b8b8b8;
+}
+
+/* =========================
+   NAV SYSTEM (studio feel)
+========================= */
+
+.nav{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  padding:2rem 3rem;
+  font-size:0.75rem;
+  color:#888;
+  mix-blend-mode:difference;
+}
+
+/* =========================
+   SECTION TITLES
+========================= */
+
+.section{
+  padding:6vw 8vw;
+}
+
+.section-title{
+  font-size:0.75rem;
+  letter-spacing:0.25em;
+  color:#777;
+  margin-bottom:3rem;
+}
+
+/* =========================
+   GRID SYSTEM (ZHA style)
+========================= */
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(12, 1fr);
+  gap:1px;
+}
+
+/* =========================
+   PROJECT MODULES
+========================= */
+
+.project{
+  grid-column:span 6;
+  background:#111;
+  overflow:hidden;
+  transition:0.5s ease;
+  border:1px solid #161616;
+}
+
+.project:hover{
+  transform:translateY(-4px);
+  border-color:#2a2a2a;
+}
+
+.project img{
+  width:100%;
+  height:420px;
+  object-fit:cover;
+  filter:contrast(1.1) grayscale(0.1);
+}
+
+.project h2{
+  font-size:0.8rem;
+  font-weight:300;
+  letter-spacing:0.12em;
+  padding:1rem;
+  margin:0;
+  color:#e6e6e6;
+}
+
+/* full span architectural landmark */
+
+.project.large{
+  grid-column:span 12;
+}
+
+.project.large img{
+  height:650px;
+}
+
+/* =========================
+   RESEARCH BLOCKS
+========================= */
+
+.research{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:2rem;
+}
+
+.block{
+  border-top:1px solid #1a1a1a;
+  padding-top:2rem;
+}
+
+.block h3{
+  font-size:0.8rem;
+  letter-spacing:0.2em;
+  color:#888;
+}
+
+.block p{
+  color:#b5b5b5;
+  line-height:1.7;
+  font-size:0.95rem;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+.footer{
+  padding:8vw;
+  border-top:1px solid #1a1a1a;
+  color:#777;
+  font-size:0.9rem;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width:900px){
+
+  .project{
+    grid-column:span 12;
+  }
+
+  .research{
+    grid-template-columns:1fr;
+  }
+
+  .hero h1{
+    font-size:2rem;
+  }
+
+}
+
+</style>
 
 </head>
 
 <body>
 
+<!-- NAV -->
+<div class="nav">
+  <div>STUDIO MARTY VANDERDONCKT</div>
+  <div>COMPUTATIONAL ARCHITECTURE / RESEARCH</div>
+</div>
+
+<!-- HERO -->
 <section class="hero">
 
 <h1>
-STUDIO MARTY VANDERDONCKT
+COMPUTATIONAL DESIGN STUDIO
 </h1>
 
 <p>
-Computational design,
-parametric sculpture
-and open-source fabrication research.
+Parametric systems, generative architecture and fabrication-driven research.
+We operate at the intersection of computation, material logic and spatial design.
 </p>
 
 </section>
+
+<!-- PROJECTS -->
+<section class="section">
+
+<div class="section-title">
+SELECTED PROJECTS
+</div>
+
+<div class="grid">
+
+<div class="project large">
+  <img src="assets/img/project01.jpg">
+  <h2>MORPHOGENETIC SYSTEM — STRUCTURAL LOGICS</h2>
+</div>
+
+<div class="project">
+  <img src="assets/img/project02.jpg">
+  <h2>PARAMETRIC FIELD STUDY</h2>
+</div>
+
+<div class="project">
+  <img src="assets/img/project03.jpg">
+  <h2>GENERATIVE SKIN SYSTEM</h2>
+</div>
+
+<div class="project">
+  <img src="assets/img/project04.jpg">
+  <h2>COMPUTATIONAL RELIEF SURFACE</h2>
+</div>
+
+</div>
+
+</section>
+
+<!-- RESEARCH -->
+<section class="section">
+
+<div class="section-title">
+RESEARCH AREAS
+</div>
+
+<div class="research">
+
+<div class="block">
+<h3>GEOMETRY SYSTEMS</h3>
+<p>
+Parametric modeling, recursive structures, spatial subdivision and rule-based geometry generation.
+</p>
+</div>
+
+<div class="block">
+<h3>MATERIAL LOGICS</h3>
+<p>
+Exploration of material behavior through computation, simulation and fabrication constraints.
+</p>
+</div>
+
+<div class="block">
+<h3>FABRICATION</h3>
+<p>
+CNC, 3D printing and robotic fabrication processes integrated into design development.
+</p>
+</div>
+
+</div>
+
+</section>
+
+<!-- FOOTER -->
+<div class="footer">
+
+Studio Marty Vanderdonckt — Computational Architecture Research  
+fvcktsh.github.io
+
+</div>
 
 </body>
 
