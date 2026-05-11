@@ -2,20 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Studio Compiler OS</title>
+<title>Full Grasshopper Web Engine</title>
 
 <style>
 body{
   margin:0;
+  overflow:hidden;
   font-family: ui-monospace, monospace;
   background:#0b0b0b;
-  color:#eaeaea;
-  overflow:hidden;
+  color:#fff;
 }
 
-#app{
+#ui{
   display:grid;
-  grid-template-columns:260px 1fr 300px;
+  grid-template-columns:240px 1fr 300px;
   height:100vh;
 }
 
@@ -25,13 +25,13 @@ body{
   padding:10px;
 }
 
-.btn{
+.nodeBtn{
   padding:8px;
   border:1px solid #333;
   margin-bottom:6px;
   cursor:pointer;
 }
-.btn:hover{ background:#111; }
+.nodeBtn:hover{ background:#111; }
 
 /* CENTER */
 #center{
@@ -74,31 +74,31 @@ canvas{
 
 <body>
 
-<div id="app">
+<div id="ui">
 
-<!-- LEFT PANEL -->
+<!-- LEFT NODE LIBRARY -->
 <div id="left">
 
-<div class="btn" onclick="addNode('GRID')">GRID</div>
-<div class="btn" onclick="addNode('ATTRACTOR')">ATTRACTOR</div>
-<div class="btn" onclick="addNode('EXTRUDE')">EXTRUDE</div>
+<div class="nodeBtn" onclick="addNode('GRID')">GRID</div>
+<div class="nodeBtn" onclick="addNode('ATTRACTOR')">ATTRACTOR</div>
+<div class="nodeBtn" onclick="addNode('EXTRUDE')">EXTRUDE</div>
 
-<div class="btn" onclick="compile()">COMPILE</div>
+<button onclick="compute()">COMPUTE</button>
 
 </div>
 
-<!-- CENTER -->
+<!-- CENTER GRAPH -->
 <div id="center">
 <canvas id="c"></canvas>
 </div>
 
-<!-- RIGHT -->
+<!-- RIGHT EXPORT -->
 <div id="right">
 
-<h3>EXPORT</h3>
+<h3>FABRICATION</h3>
 
-<button onclick="exportJSON()">EXPORT JSON</button>
 <button onclick="exportDXF()">EXPORT DXF</button>
+<button onclick="exportSVG()">EXPORT SVG</button>
 <button onclick="exportSTL()">EXPORT STL</button>
 
 </div>
@@ -108,14 +108,14 @@ canvas{
 <script>
 
 /* =========================
-   DATA MODEL
+   DATA SYSTEM
 ========================= */
 
 let nodes = [];
 let geometry = [];
 
 /* =========================
-   ADD NODE
+   NODE CREATION
 ========================= */
 
 function addNode(type){
@@ -135,7 +135,7 @@ function addNode(type){
 }
 
 /* =========================
-   DRAG
+   DRAG SYSTEM
 ========================= */
 
 function drag(el){
@@ -159,35 +159,34 @@ function drag(el){
 }
 
 /* =========================
-   COMPILER CORE
+   CORE COMPUTATION ENGINE
 ========================= */
 
-function compile(){
+function compute(){
 
   geometry = [];
 
-  let size = 150;
+  let size = 200;
   let density = 10;
 
   for(let x=0;x<size;x+=density){
     for(let y=0;y<size;y+=density){
 
-      let px = x;
-      let py = y;
-      let pz = 0;
+      let px=x;
+      let py=y;
 
-      // simple attractor logic
-      let cx = 75, cy = 75;
+      let cx=100, cy=100;
 
-      let dx = cx - px;
-      let dy = cy - py;
+      let dx=cx-px;
+      let dy=cy-py;
 
-      let d = Math.sqrt(dx*dx + dy*dy);
-      let f = 50/(d+1);
+      let d=Math.sqrt(dx*dx+dy*dy);
+      let f=80/(d+1);
 
       px += dx*f*0.02;
       py += dy*f*0.02;
-      pz = Math.sin(d*0.1)*10;
+
+      let pz = Math.sin(d*0.1)*15;
 
       geometry.push([px,py,pz]);
     }
@@ -202,11 +201,11 @@ function compile(){
 
 function render(){
 
-  const c = document.getElementById("c");
-  const ctx = c.getContext("2d");
+  const c=document.getElementById("c");
+  const ctx=c.getContext("2d");
 
-  c.width = window.innerWidth;
-  c.height = window.innerHeight;
+  c.width=window.innerWidth;
+  c.height=window.innerHeight;
 
   ctx.clearRect(0,0,c.width,c.height);
 
@@ -215,30 +214,22 @@ function render(){
   geometry.forEach(p=>{
     ctx.fillRect(p[0],p[1],2,2);
   });
-
 }
 
 /* =========================
-   EXPORT SYSTEM
+   DXF EXPORT (LASER / CNC)
 ========================= */
-
-function exportJSON(){
-
-  download("geometry.json", JSON.stringify(geometry));
-}
 
 function exportDXF(){
 
   let dxf = "0\nSECTION\n2\nENTITIES\n";
 
-  geometry.forEach((p,i)=>{
+  for(let i=0;i<geometry.length-1;i++){
 
-    if(i<geometry.length-1){
+    let a=geometry[i];
+    let b=geometry[i+1];
 
-      let a = geometry[i];
-      let b = geometry[i+1];
-
-      dxf += `
+    dxf += `
 0
 LINE
 10 ${a[0]}
@@ -248,17 +239,41 @@ LINE
 21 ${b[1]}
 31 0
 `;
-    }
-  });
+  }
 
   dxf += "0\nENDSEC\n0\nEOF";
 
-  download("model.dxf", dxf);
+  download("fabrication.dxf", dxf);
 }
+
+/* =========================
+   SVG EXPORT (LASER CUT 2D CLEAN)
+========================= */
+
+function exportSVG(){
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg">`;
+
+  for(let i=0;i<geometry.length-1;i++){
+
+    let a=geometry[i];
+    let b=geometry[i+1];
+
+    svg += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="black"/>`;
+  }
+
+  svg += `</svg>`;
+
+  download("fabrication.svg", svg);
+}
+
+/* =========================
+   STL EXPORT (3D PRINT)
+========================= */
 
 function exportSTL(){
 
-  let stl = "solid studio\n";
+  let stl = "solid grasshopper\n";
 
   geometry.forEach(p=>{
 
@@ -275,17 +290,19 @@ endfacet
 
   stl += "endsolid";
 
-  download("model.stl", stl);
+  download("fabrication.stl", stl);
 }
 
 /* =========================
-   DOWNLOAD
+   DOWNLOAD SYSTEM
 ========================= */
 
 function download(name,data){
-  let b = new Blob([data],{type:"text/plain"});
-  let u = URL.createObjectURL(b);
-  let a = document.createElement("a");
+
+  let b=new Blob([data],{type:"text/plain"});
+  let u=URL.createObjectURL(b);
+
+  let a=document.createElement("a");
   a.href=u;
   a.download=name;
   a.click();
