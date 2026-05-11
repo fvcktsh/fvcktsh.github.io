@@ -1,173 +1,281 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>STUDIO PORTAL</title>
+<title>WEB GRASSHOPPER SYSTEM</title>
 
 <style>
 body{
   margin:0;
-  font-family: ui-monospace, monospace;
+  overflow:hidden;
   background:#0a0a0a;
-  color:#eaeaea;
+  font-family:ui-monospace, monospace;
+  color:#fff;
 }
 
-/* GRID LAYOUT */
-#layout{
-  display:grid;
-  grid-template-columns:280px 1fr 320px;
-  height:100vh;
+/* CANVAS */
+#canvas{
+  position:absolute;
+  width:100%;
+  height:100%;
+  z-index:0;
 }
 
-/* LEFT NAV */
-#left{
-  border-right:1px solid #222;
-  padding:12px;
-}
-
-.repo{
+/* NODE */
+.node{
+  position:absolute;
+  width:140px;
   padding:10px;
-  margin-bottom:8px;
-  border:1px solid #333;
-  cursor:pointer;
-}
-
-.repo:hover{
   background:#111;
+  border:1px solid #333;
+  cursor:grab;
+  z-index:10;
 }
 
-/* CENTER */
-#center{
-  padding:20px;
-  overflow:auto;
+.node:active{
+  cursor:grabbing;
 }
 
-h1{
-  font-size:22px;
-  letter-spacing:2px;
+/* SOCKETS */
+.socket{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#fff;
+  position:absolute;
 }
 
-.section{
-  margin-bottom:40px;
-  border-bottom:1px solid #222;
-  padding-bottom:20px;
-}
+.input{ left:-5px; top:50%; }
+.output{ right:-5px; top:50%; }
 
-/* RIGHT PANEL */
-#right{
-  border-left:1px solid #222;
-  padding:12px;
+/* UI */
+#ui{
+  position:absolute;
+  top:10px;
+  left:10px;
+  z-index:20;
 }
 
 button{
-  width:100%;
-  margin-top:8px;
-  padding:10px;
+  padding:8px;
+  margin:3px;
   background:#111;
-  color:#fff;
   border:1px solid #333;
+  color:#fff;
   cursor:pointer;
 }
 
-button:hover{
-  background:#1a1a1a;
+.line{
+  position:absolute;
+  height:2px;
+  background:#fff;
+  transform-origin:left center;
+  z-index:1;
 }
-
-.tag{
-  display:inline-block;
-  padding:3px 6px;
-  border:1px solid #333;
-  margin:3px;
-  font-size:11px;
-}
-
 </style>
 </head>
 
 <body>
 
-<div id="layout">
+<canvas id="canvas"></canvas>
 
-<!-- LEFT -->
-<div id="left">
-
-<h3>STUDIO SYSTEM</h3>
-
-<div class="repo">01 CORE SYSTEM</div>
-<div class="repo">02 NODE ENGINE</div>
-<div class="repo">03 GEOMETRY CORE</div>
-<div class="repo">04 FABRICATION</div>
-<div class="repo">05 RESEARCH LAB</div>
-<div class="repo">06 PROJECTS</div>
-
+<div id="ui">
+<button onclick="addNode('GRID')">GRID</button>
+<button onclick="addNode('ATTRACTOR')">ATTRACTOR</button>
+<button onclick="compute()">RUN</button>
+<button onclick="exportDXF()">DXF</button>
+<button onclick="exportSTL()">STL</button>
 </div>
 
-<!-- CENTER -->
-<div id="center">
+<script>
 
-<h1>STUDIO COMPUTATIONAL SYSTEM</h1>
+/* =========================
+   SYSTEM STATE
+========================= */
 
-<div class="section">
-<h3>MANIFEST</h3>
-<p>
-Computational architecture studio focused on generative systems,
-parametric design and fabrication pipelines (CNC / laser / 3D print).
-</p>
-</div>
+let nodes = [];
+let connections = [];
+let geometry = [];
 
-<div class="section">
-<h3>RESEARCH LAYER</h3>
-<div class="tag">morphogenetic systems</div>
-<div class="tag">field-based design</div>
-<div class="tag">mesh generation</div>
-<div class="tag">structural computation</div>
-</div>
+/* =========================
+   ADD NODE
+========================= */
 
-<div class="section">
-<h3>PROJECT LAYER</h3>
-<p>
-Each project is a computational architecture system:
-facade, pavilion, lattice, structure experiments.
-</p>
-</div>
+function addNode(type){
 
-<div class="section">
-<h3>FABRICATION OUTPUT</h3>
-<p>
-DXF → CNC / LASER CUTTING<br>
-STL → 3D PRINTING<br>
-SVG → 2D FABRICATION
-</p>
-</div>
+  const el = document.createElement("div");
+  el.className = "node";
+  el.innerHTML = type;
 
-</div>
+  el.style.left = Math.random()*400+"px";
+  el.style.top = Math.random()*300+"px";
 
-<!-- RIGHT -->
-<div id="right">
+  // sockets
+  const input = document.createElement("div");
+  input.className="socket input";
 
-<h3>STUDIO ACTIONS</h3>
+  const output = document.createElement("div");
+  output.className="socket output";
 
-<button onclick="alert('Generate Geometry System')">
-GENERATE SYSTEM
-</button>
+  el.appendChild(input);
+  el.appendChild(output);
 
-<button onclick="alert('Export DXF')">
-EXPORT DXF
-</button>
+  document.body.appendChild(el);
 
-<button onclick="alert('Export STL')">
-EXPORT STL
-</button>
+  nodes.push({type, el});
 
-<h3 style="margin-top:20px;">STATUS</h3>
+  drag(el);
+}
 
-<div class="tag">CORE: ACTIVE</div>
-<div class="tag">RESEARCH: LIVE</div>
-<div class="tag">FAB: READY</div>
+/* =========================
+   DRAG
+========================= */
 
-</div>
+function drag(el){
 
-</div>
+  let dx,dy,drag=false;
+
+  el.onmousedown=(e)=>{
+    drag=true;
+    dx=e.offsetX;
+    dy=e.offsetY;
+  };
+
+  document.onmousemove=(e)=>{
+    if(drag){
+      el.style.left=(e.pageX-dx)+"px";
+      el.style.top=(e.pageY-dy)+"px";
+    }
+  };
+
+  document.onmouseup=()=>drag=false;
+}
+
+/* =========================
+   COMPUTE ENGINE
+========================= */
+
+function compute(){
+
+  geometry = [];
+
+  let density = 10;
+
+  for(let x=0;x<200;x+=density){
+    for(let y=0;y<200;y+=density){
+
+      let cx = 100;
+      let cy = 100;
+
+      let dx = cx-x;
+      let dy = cy-y;
+
+      let d = Math.sqrt(dx*dx+dy*dy);
+      let f = 90/(d+1);
+
+      let px = x + dx*f*0.02;
+      let py = y + dy*f*0.02;
+      let pz = Math.sin(d*0.15)*20;
+
+      geometry.push([px,py,pz]);
+    }
+  }
+
+  render();
+}
+
+/* =========================
+   RENDER
+========================= */
+
+function render(){
+
+  const c=document.getElementById("canvas");
+  const ctx=c.getContext("2d");
+
+  c.width=window.innerWidth;
+  c.height=window.innerHeight;
+
+  ctx.clearRect(0,0,c.width,c.height);
+
+  ctx.fillStyle="#fff";
+
+  geometry.forEach(p=>{
+    ctx.fillRect(p[0],p[1],2,2);
+  });
+}
+
+/* =========================
+   DXF EXPORT
+========================= */
+
+function exportDXF(){
+
+  let dxf="0\nSECTION\n2\nENTITIES\n";
+
+  for(let i=0;i<geometry.length-1;i++){
+
+    let a=geometry[i];
+    let b=geometry[i+1];
+
+    dxf+=`
+0
+LINE
+10 ${a[0]}
+20 ${a[1]}
+30 0
+11 ${b[0]}
+21 ${b[1]}
+31 0
+`;
+  }
+
+  dxf+="0\nENDSEC\n0\nEOF";
+
+  download("studio.dxf",dxf);
+}
+
+/* =========================
+   STL EXPORT
+========================= */
+
+function exportSTL(){
+
+  let stl="solid studio\n";
+
+  geometry.forEach(p=>{
+    stl+=`
+facet normal 0 0 1
+outer loop
+vertex ${p[0]} ${p[1]} ${p[2]}
+vertex ${p[0]+1} ${p[1]} ${p[2]}
+vertex ${p[0]} ${p[1]+1} ${p[2]}
+endloop
+endfacet
+`;
+  });
+
+  stl+="endsolid";
+
+  download("studio.stl",stl);
+}
+
+/* =========================
+   DOWNLOAD
+========================= */
+
+function download(name,data){
+
+  const blob=new Blob([data],{type:"text/plain"});
+  const url=URL.createObjectURL(blob);
+
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=name;
+  a.click();
+}
+
+</script>
 
 </body>
 </html>
