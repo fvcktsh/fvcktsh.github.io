@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta charset="UTF-8">
-<title>Full Fabrication Pipeline</title>
+<title>Studio Operating System</title>
 
 <style>
+
+/* =========================
+   CORE SYSTEM UI
+========================= */
 
 body{
   margin:0;
   font-family: monospace;
   background:#0b0b0b;
-  color:#ddd;
+  color:#eaeaea;
+  overflow:hidden;
 }
-
-/* =========================
-   LAYOUT ENGINE
-========================= */
 
 #app{
   display:grid;
-  grid-template-columns:260px 1fr 300px;
+  grid-template-columns:260px 1fr 320px;
   height:100vh;
 }
 
@@ -34,8 +34,8 @@ body{
 }
 
 .node{
-  border:1px solid #333;
   padding:8px;
+  border:1px solid #333;
   margin-bottom:6px;
   cursor:pointer;
 }
@@ -45,7 +45,7 @@ body{
 }
 
 /* =========================
-   WORKSPACE
+   CANVAS (COMPUTATIONAL SPACE)
 ========================= */
 
 #center{
@@ -59,7 +59,7 @@ canvas{
 }
 
 /* =========================
-   PARAMETERS
+   STUDIO MEMORY PANEL
 ========================= */
 
 #right{
@@ -67,13 +67,14 @@ canvas{
   padding:10px;
 }
 
-input{
-  width:100%;
+.section{
+  margin-bottom:20px;
+  font-size:12px;
 }
 
 button{
-  margin-top:10px;
   width:100%;
+  margin-top:8px;
   padding:8px;
   background:#111;
   color:#ddd;
@@ -85,6 +86,10 @@ button:hover{
   background:#1a1a1a;
 }
 
+input{
+  width:100%;
+}
+
 </style>
 
 </head>
@@ -93,13 +98,13 @@ button:hover{
 
 <div id="app">
 
-<!-- LEFT NODE LIBRARY -->
+<!-- LEFT NODE SYSTEM -->
 <div id="left">
 
-<div class="node" onclick="setMode('grid')">GRID</div>
-<div class="node" onclick="setMode('attractor')">ATTRACTOR FIELD</div>
+<div class="node" onclick="setMode('grid')">GEOMETRY GRID</div>
+<div class="node" onclick="setMode('field')">ATTRACTOR FIELD</div>
 <div class="node" onclick="setMode('subdivision')">SUBDIVISION</div>
-<div class="node" onclick="setMode('extrude')">EXTRUDE</div>
+<div class="node" onclick="setMode('fabric')">FABRICATION</div>
 
 </div>
 
@@ -108,23 +113,34 @@ button:hover{
 <canvas id="c"></canvas>
 </div>
 
-<!-- RIGHT PARAMETERS -->
+<!-- RIGHT STUDIO MEMORY -->
 <div id="right">
 
+<div class="section">
 <h3>PARAMETERS</h3>
 
 Density
-<input id="density" type="range" min="5" max="40" value="20">
+<input id="density" type="range" min="5" max="50" value="20">
 
-Attraction
-<input id="attraction" type="range" min="0" max="200" value="80">
+Force
+<input id="force" type="range" min="0" max="200" value="80">
 
-Height
-<input id="height" type="range" min="0" max="100" value="40">
+Depth
+<input id="depth" type="range" min="0" max="100" value="30">
+</div>
 
-<button onclick="generate()">GENERATE</button>
-<button onclick="exportSVG()">EXPORT SVG</button>
-<button onclick="export3D()">EXPORT 3D (OBJ)</button>
+<div class="section">
+<h3>FABRICATION</h3>
+
+<button onclick="generate()">GENERATE SYSTEM</button>
+<button onclick="exportSVG()">EXPORT SVG (LASER)</button>
+<button onclick="exportOBJ()">EXPORT OBJ (3D PRINT)</button>
+</div>
+
+<div class="section">
+<h3>STUDIO MEMORY</h3>
+<div id="log">SYSTEM READY</div>
+</div>
 
 </div>
 
@@ -133,7 +149,7 @@ Height
 <script>
 
 /* =========================
-   CANVAS ENGINE
+   CORE STATE
 ========================= */
 
 const canvas = document.getElementById("c");
@@ -142,24 +158,20 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-/* =========================
-   STATE SYSTEM (NODE GRAPH SIMPLIFIED)
-========================= */
-
 let mode = "grid";
+let points = [];
 
 function setMode(m){
   mode = m;
+  log("MODE: " + m);
+}
+
+function log(t){
+  document.getElementById("log").innerText = t;
 }
 
 /* =========================
-   GEOMETRY DATA
-========================= */
-
-let points = [];
-
-/* =========================
-   GENERATION ENGINE
+   COMPUTATIONAL ENGINE
 ========================= */
 
 function generate(){
@@ -167,8 +179,8 @@ function generate(){
   points = [];
 
   const d = +document.getElementById("density").value;
-  const a = +document.getElementById("attraction").value;
-  const h = +document.getElementById("height").value;
+  const f = +document.getElementById("force").value;
+  const depth = +document.getElementById("depth").value;
 
   const cx = canvas.width/2;
   const cy = canvas.height/2;
@@ -179,33 +191,34 @@ function generate(){
       let px = x;
       let py = y;
 
-      if(mode === "attractor"){
+      if(mode === "field"){
 
         let dx = cx - px;
         let dy = cy - py;
-        let dist = Math.sqrt(dx*dx+dy*dy);
 
-        let f = a/(dist+1);
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        let force = f/(dist+1);
 
-        px += dx*f*0.02;
-        py += dy*f*0.02;
+        px += dx*force*0.02;
+        py += dy*force*0.02;
       }
 
       if(mode === "subdivision"){
 
-        px += Math.sin(x*0.01)*5;
-        py += Math.cos(y*0.01)*5;
+        px += Math.sin(x*0.02)*5;
+        py += Math.cos(y*0.02)*5;
       }
 
-      points.push({x:px, y:py, z:h});
+      points.push({x:px,y:py,z:depth});
     }
   }
 
   draw();
+  log("SYSTEM GENERATED: " + points.length + " NODES");
 }
 
 /* =========================
-   RENDER 2D FABRIC STRUCTURE
+   RENDER
 ========================= */
 
 function draw(){
@@ -222,7 +235,7 @@ function draw(){
 }
 
 /* =========================
-   EXPORT SVG (LASER / CNC)
+   FABRICATION EXPORT
 ========================= */
 
 function exportSVG(){
@@ -236,13 +249,11 @@ function exportSVG(){
   svg += `</svg>`;
 
   download("fabrication.svg", svg);
+
+  log("EXPORTED SVG");
 }
 
-/* =========================
-   EXPORT 3D (SIMPLE OBJ)
-========================= */
-
-function export3D(){
+function exportOBJ(){
 
   let obj = "";
 
@@ -250,15 +261,17 @@ function export3D(){
     obj += `v ${p.x} ${p.y} ${p.z}\n`;
   });
 
-  download("model.obj", obj);
+  download("fabrication.obj", obj);
+
+  log("EXPORTED OBJ");
 }
 
 /* =========================
-   DOWNLOAD
+   DOWNLOAD ENGINE
 ========================= */
 
-function download(name, data){
-  const blob = new Blob([data], {type:"text/plain"});
+function download(name,data){
+  const blob = new Blob([data],{type:"text/plain"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
