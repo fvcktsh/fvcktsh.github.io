@@ -1,281 +1,46 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>WEB GRASSHOPPER SYSTEM</title>
-
-<style>
-body{
-  margin:0;
-  overflow:hidden;
-  background:#0a0a0a;
-  font-family:ui-monospace, monospace;
-  color:#fff;
-}
-
-/* CANVAS */
-#canvas{
-  position:absolute;
-  width:100%;
-  height:100%;
-  z-index:0;
-}
-
-/* NODE */
-.node{
-  position:absolute;
-  width:140px;
-  padding:10px;
-  background:#111;
-  border:1px solid #333;
-  cursor:grab;
-  z-index:10;
-}
-
-.node:active{
-  cursor:grabbing;
-}
-
-/* SOCKETS */
-.socket{
-  width:10px;
-  height:10px;
-  border-radius:50%;
-  background:#fff;
-  position:absolute;
-}
-
-.input{ left:-5px; top:50%; }
-.output{ right:-5px; top:50%; }
-
-/* UI */
-#ui{
-  position:absolute;
-  top:10px;
-  left:10px;
-  z-index:20;
-}
-
-button{
-  padding:8px;
-  margin:3px;
-  background:#111;
-  border:1px solid #333;
-  color:#fff;
-  cursor:pointer;
-}
-
-.line{
-  position:absolute;
-  height:2px;
-  background:#fff;
-  transform-origin:left center;
-  z-index:1;
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FVCKTSH</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<canvas id="canvas"></canvas>
+<header class="header">
+  <div class="logo">FVCKTSH</div>
+  <nav>
+    <a href="#">Work</a>
+    <a href="about.html">About</a>
+    <a href="#">Contact</a>
+  </nav>
+</header>
 
-<div id="ui">
-<button onclick="addNode('GRID')">GRID</button>
-<button onclick="addNode('ATTRACTOR')">ATTRACTOR</button>
-<button onclick="compute()">RUN</button>
-<button onclick="exportDXF()">DXF</button>
-<button onclick="exportSTL()">STL</button>
-</div>
+<main class="grid">
 
-<script>
+  <a class="project" href="projects/project-1.html">
+    <img src="assets/img/project1.jpg">
+    <div class="info">
+      <h2>Project One</h2>
+      <p>Installation — 2026</p>
+    </div>
+  </a>
 
-/* =========================
-   SYSTEM STATE
-========================= */
+  <a class="project" href="projects/project-2.html">
+    <img src="assets/img/project2.jpg">
+    <div class="info">
+      <h2>Project Two</h2>
+      <p>3D / Sculpture — 2025</p>
+    </div>
+  </a>
 
-let nodes = [];
-let connections = [];
-let geometry = [];
+</main>
 
-/* =========================
-   ADD NODE
-========================= */
-
-function addNode(type){
-
-  const el = document.createElement("div");
-  el.className = "node";
-  el.innerHTML = type;
-
-  el.style.left = Math.random()*400+"px";
-  el.style.top = Math.random()*300+"px";
-
-  // sockets
-  const input = document.createElement("div");
-  input.className="socket input";
-
-  const output = document.createElement("div");
-  output.className="socket output";
-
-  el.appendChild(input);
-  el.appendChild(output);
-
-  document.body.appendChild(el);
-
-  nodes.push({type, el});
-
-  drag(el);
-}
-
-/* =========================
-   DRAG
-========================= */
-
-function drag(el){
-
-  let dx,dy,drag=false;
-
-  el.onmousedown=(e)=>{
-    drag=true;
-    dx=e.offsetX;
-    dy=e.offsetY;
-  };
-
-  document.onmousemove=(e)=>{
-    if(drag){
-      el.style.left=(e.pageX-dx)+"px";
-      el.style.top=(e.pageY-dy)+"px";
-    }
-  };
-
-  document.onmouseup=()=>drag=false;
-}
-
-/* =========================
-   COMPUTE ENGINE
-========================= */
-
-function compute(){
-
-  geometry = [];
-
-  let density = 10;
-
-  for(let x=0;x<200;x+=density){
-    for(let y=0;y<200;y+=density){
-
-      let cx = 100;
-      let cy = 100;
-
-      let dx = cx-x;
-      let dy = cy-y;
-
-      let d = Math.sqrt(dx*dx+dy*dy);
-      let f = 90/(d+1);
-
-      let px = x + dx*f*0.02;
-      let py = y + dy*f*0.02;
-      let pz = Math.sin(d*0.15)*20;
-
-      geometry.push([px,py,pz]);
-    }
-  }
-
-  render();
-}
-
-/* =========================
-   RENDER
-========================= */
-
-function render(){
-
-  const c=document.getElementById("canvas");
-  const ctx=c.getContext("2d");
-
-  c.width=window.innerWidth;
-  c.height=window.innerHeight;
-
-  ctx.clearRect(0,0,c.width,c.height);
-
-  ctx.fillStyle="#fff";
-
-  geometry.forEach(p=>{
-    ctx.fillRect(p[0],p[1],2,2);
-  });
-}
-
-/* =========================
-   DXF EXPORT
-========================= */
-
-function exportDXF(){
-
-  let dxf="0\nSECTION\n2\nENTITIES\n";
-
-  for(let i=0;i<geometry.length-1;i++){
-
-    let a=geometry[i];
-    let b=geometry[i+1];
-
-    dxf+=`
-0
-LINE
-10 ${a[0]}
-20 ${a[1]}
-30 0
-11 ${b[0]}
-21 ${b[1]}
-31 0
-`;
-  }
-
-  dxf+="0\nENDSEC\n0\nEOF";
-
-  download("studio.dxf",dxf);
-}
-
-/* =========================
-   STL EXPORT
-========================= */
-
-function exportSTL(){
-
-  let stl="solid studio\n";
-
-  geometry.forEach(p=>{
-    stl+=`
-facet normal 0 0 1
-outer loop
-vertex ${p[0]} ${p[1]} ${p[2]}
-vertex ${p[0]+1} ${p[1]} ${p[2]}
-vertex ${p[0]} ${p[1]+1} ${p[2]}
-endloop
-endfacet
-`;
-  });
-
-  stl+="endsolid";
-
-  download("studio.stl",stl);
-}
-
-/* =========================
-   DOWNLOAD
-========================= */
-
-function download(name,data){
-
-  const blob=new Blob([data],{type:"text/plain"});
-  const url=URL.createObjectURL(blob);
-
-  const a=document.createElement("a");
-  a.href=url;
-  a.download=name;
-  a.click();
-}
-
-</script>
+<footer>
+  <p>© FVCKTSH — 2026</p>
+</footer>
 
 </body>
 </html>
