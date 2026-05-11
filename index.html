@@ -1,62 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>LIVE STUDIO DASHBOARD</title>
+<meta charset="UTF-8">
+<title>STUDIO PORTAL</title>
 
 <style>
 body{
   margin:0;
-  font-family:ui-monospace, monospace;
+  font-family: ui-monospace, monospace;
   background:#0a0a0a;
-  color:#fff;
+  color:#eaeaea;
 }
 
+/* GRID LAYOUT */
 #layout{
   display:grid;
-  grid-template-columns:260px 1fr 300px;
+  grid-template-columns:280px 1fr 320px;
   height:100vh;
 }
 
-/* LEFT */
+/* LEFT NAV */
 #left{
   border-right:1px solid #222;
-  padding:10px;
+  padding:12px;
 }
 
 .repo{
-  padding:8px;
+  padding:10px;
+  margin-bottom:8px;
   border:1px solid #333;
-  margin-bottom:6px;
   cursor:pointer;
+}
+
+.repo:hover{
+  background:#111;
 }
 
 /* CENTER */
 #center{
-  position:relative;
+  padding:20px;
+  overflow:auto;
 }
 
-/* GRAPH CANVAS */
-canvas{
-  position:absolute;
-  width:100%;
-  height:100%;
+h1{
+  font-size:22px;
+  letter-spacing:2px;
 }
 
-/* RIGHT */
+.section{
+  margin-bottom:40px;
+  border-bottom:1px solid #222;
+  padding-bottom:20px;
+}
+
+/* RIGHT PANEL */
 #right{
   border-left:1px solid #222;
-  padding:10px;
+  padding:12px;
 }
 
 button{
   width:100%;
-  margin-top:6px;
-  padding:8px;
+  margin-top:8px;
+  padding:10px;
   background:#111;
   color:#fff;
   border:1px solid #333;
+  cursor:pointer;
 }
+
+button:hover{
+  background:#1a1a1a;
+}
+
+.tag{
+  display:inline-block;
+  padding:3px 6px;
+  border:1px solid #333;
+  margin:3px;
+  font-size:11px;
+}
+
 </style>
 </head>
 
@@ -64,191 +88,86 @@ button{
 
 <div id="layout">
 
-<!-- LEFT: REPOS -->
+<!-- LEFT -->
 <div id="left">
-<h3>STUDIO</h3>
-<div id="repos"></div>
+
+<h3>STUDIO SYSTEM</h3>
+
+<div class="repo">01 CORE SYSTEM</div>
+<div class="repo">02 NODE ENGINE</div>
+<div class="repo">03 GEOMETRY CORE</div>
+<div class="repo">04 FABRICATION</div>
+<div class="repo">05 RESEARCH LAB</div>
+<div class="repo">06 PROJECTS</div>
+
 </div>
 
-<!-- CENTER: VISUAL SYSTEM -->
+<!-- CENTER -->
 <div id="center">
-<canvas id="canvas"></canvas>
+
+<h1>STUDIO COMPUTATIONAL SYSTEM</h1>
+
+<div class="section">
+<h3>MANIFEST</h3>
+<p>
+Computational architecture studio focused on generative systems,
+parametric design and fabrication pipelines (CNC / laser / 3D print).
+</p>
 </div>
 
-<!-- RIGHT: CONTROL -->
+<div class="section">
+<h3>RESEARCH LAYER</h3>
+<div class="tag">morphogenetic systems</div>
+<div class="tag">field-based design</div>
+<div class="tag">mesh generation</div>
+<div class="tag">structural computation</div>
+</div>
+
+<div class="section">
+<h3>PROJECT LAYER</h3>
+<p>
+Each project is a computational architecture system:
+facade, pavilion, lattice, structure experiments.
+</p>
+</div>
+
+<div class="section">
+<h3>FABRICATION OUTPUT</h3>
+<p>
+DXF → CNC / LASER CUTTING<br>
+STL → 3D PRINTING<br>
+SVG → 2D FABRICATION
+</p>
+</div>
+
+</div>
+
+<!-- RIGHT -->
 <div id="right">
 
-<h3>FABRICATION</h3>
+<h3>STUDIO ACTIONS</h3>
 
-<button onclick="generateGeometry()">GENERATE</button>
-<button onclick="exportDXF()">DXF</button>
-<button onclick="exportSTL()">STL</button>
+<button onclick="alert('Generate Geometry System')">
+GENERATE SYSTEM
+</button>
+
+<button onclick="alert('Export DXF')">
+EXPORT DXF
+</button>
+
+<button onclick="alert('Export STL')">
+EXPORT STL
+</button>
+
+<h3 style="margin-top:20px;">STATUS</h3>
+
+<div class="tag">CORE: ACTIVE</div>
+<div class="tag">RESEARCH: LIVE</div>
+<div class="tag">FAB: READY</div>
 
 </div>
 
 </div>
-
-<script>
-
-/* =========================
-   GITHUB DATA (SIMULATED)
-========================= */
-
-let studioState = {
-  repos: [
-    {name:"geometry-core", status:"active"},
-    {name:"node-graph-engine", status:"active"},
-    {name:"fabrication-compiler", status:"build"},
-    {name:"research-atlas", status:"idle"}
-  ]
-};
-
-/* =========================
-   LOAD UI
-========================= */
-
-function loadRepos(){
-
-  const container = document.getElementById("repos");
-
-  studioState.repos.forEach(r=>{
-
-    const div = document.createElement("div");
-    div.className="repo";
-    div.innerHTML = `${r.name}<br><small>${r.status}</small>`;
-
-    container.appendChild(div);
-  });
-}
-
-loadRepos();
-
-/* =========================
-   GEOMETRY SYSTEM
-========================= */
-
-let geometry = [];
-
-function generateGeometry(){
-
-  geometry = [];
-
-  let size = 150;
-  let density = 12;
-
-  for(let x=0;x<size;x+=density){
-    for(let y=0;y<size;y+=density){
-
-      let dx = 75 - x;
-      let dy = 75 - y;
-
-      let d = Math.sqrt(dx*dx+dy*dy);
-      let f = 80/(d+1);
-
-      geometry.push([
-        x + dx*f*0.02,
-        y + dy*f*0.02,
-        Math.sin(d*0.1)*10
-      ]);
-    }
-  }
-
-  render();
-}
-
-/* =========================
-   VISUAL RENDER
-========================= */
-
-function render(){
-
-  const c = document.getElementById("canvas");
-  const ctx = c.getContext("2d");
-
-  c.width = window.innerWidth;
-  c.height = window.innerHeight;
-
-  ctx.clearRect(0,0,c.width,c.height);
-
-  ctx.fillStyle="#fff";
-
-  geometry.forEach(p=>{
-    ctx.fillRect(p[0],p[1],2,2);
-  });
-}
-
-/* =========================
-   DXF EXPORT
-========================= */
-
-function exportDXF(){
-
-  let dxf = "0\nSECTION\n2\nENTITIES\n";
-
-  for(let i=0;i<geometry.length-1;i++){
-
-    let a=geometry[i];
-    let b=geometry[i+1];
-
-    dxf += `
-0
-LINE
-10 ${a[0]}
-20 ${a[1]}
-30 0
-11 ${b[0]}
-21 ${b[1]}
-31 0
-`;
-  }
-
-  dxf += "0\nENDSEC\n0\nEOF";
-
-  download("studio.dxf", dxf);
-}
-
-/* =========================
-   STL EXPORT
-========================= */
-
-function exportSTL(){
-
-  let stl = "solid studio\n";
-
-  geometry.forEach(p=>{
-
-    stl += `
-facet normal 0 0 1
-outer loop
-vertex ${p[0]} ${p[1]} ${p[2]}
-vertex ${p[0]+1} ${p[1]} ${p[2]}
-vertex ${p[0]} ${p[1]+1} ${p[2]}
-endloop
-endfacet
-`;
-  });
-
-  stl += "endsolid";
-
-  download("studio.stl", stl);
-}
-
-/* =========================
-   DOWNLOAD
-========================= */
-
-function download(name,data){
-
-  const blob = new Blob([data],{type:"text/plain"});
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-}
-
-</script>
 
 </body>
 </html>
