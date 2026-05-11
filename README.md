@@ -1,3 +1,3 @@
 # fvcktsh.github.io
-Computational design, parametric art design architecture
+Computational design parametric (A-A-D) art architecture design
 and open-source fabrication research.
