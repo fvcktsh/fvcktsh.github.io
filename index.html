@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Studio OS v3 — Data Flow + 3D Engine</title>
+<title>Studio OS v4 — Architectural Machine</title>
 
 <style>
 
 /* =========================
-   CORE UI (ENGINEERING STYLE)
+   CORE SYSTEM UI
 ========================= */
 
 body{
@@ -49,14 +49,15 @@ body{
 }
 
 /* =========================
-   CENTER — NODE GRAPH + 3D
+   CENTER — GRAPH + 3D
 ========================= */
 
 #center{
   position:relative;
+  overflow:hidden;
 }
 
-/* node layer */
+/* node */
 .node{
   position:absolute;
   width:140px;
@@ -67,7 +68,7 @@ body{
   z-index:2;
 }
 
-/* WebGL canvas */
+/* canvas 3D */
 canvas{
   position:absolute;
   width:100%;
@@ -75,8 +76,26 @@ canvas{
   z-index:1;
 }
 
+/* cables */
+svg{
+  position:absolute;
+  width:100%;
+  height:100%;
+  z-index:3;
+  pointer-events:none;
+}
+
+/* ports */
+.port{
+  width:8px;
+  height:8px;
+  background:#888;
+  border-radius:50%;
+  position:absolute;
+}
+
 /* =========================
-   RIGHT — PARAMETERS
+   RIGHT PANEL
 ========================= */
 
 #right{
@@ -84,25 +103,13 @@ canvas{
   padding:10px;
 }
 
-input, button{
+button, input{
   width:100%;
   margin-top:6px;
   padding:6px;
   background:#111;
-  border:1px solid #333;
   color:#ddd;
-}
-
-/* =========================
-   CABLES (DATA FLOW VISUAL)
-========================= */
-
-svg{
-  position:absolute;
-  width:100%;
-  height:100%;
-  z-index:3;
-  pointer-events:none;
+  border:1px solid #333;
 }
 
 </style>
@@ -117,15 +124,17 @@ svg{
 
 <div class="nodeBtn" onclick="addNode('GRID')">GRID</div>
 <div class="nodeBtn" onclick="addNode('ATTRACTOR')">ATTRACTOR</div>
+<div class="nodeBtn" onclick="addNode('SUBDIVIDE')">SUBDIVIDE</div>
 <div class="nodeBtn" onclick="addNode('EXTRUDE')">EXTRUDE</div>
-<div class="nodeBtn" onclick="compute()">COMPUTE</div>
+
+<button onclick="compute()">COMPUTE SYSTEM</button>
 
 </div>
 
 <!-- CENTER -->
 <div id="center">
 
-<canvas id="gl"></canvas>
+<canvas id="c"></canvas>
 <svg id="cables"></svg>
 
 </div>
@@ -139,15 +148,16 @@ Density
 <input id="density" type="range" min="5" max="30" value="15">
 
 Force
-<input id="force" type="range" min="0" max="200" value="80">
+<input id="force" type="range" min="0" max="200" value="90">
 
 Height
-<input id="height" type="range" min="0" max="50" value="20">
+<input id="height" type="range" min="0" max="80" value="30">
 
-<h3>EXPORT</h3>
+<h3>FABRICATION</h3>
 
-<button onclick="exportJSON()">EXPORT JSON</button>
+<button onclick="exportDXF()">EXPORT DXF</button>
 <button onclick="exportOBJ()">EXPORT OBJ</button>
+<button onclick="exportJSON()">EXPORT JSON</button>
 
 </div>
 
@@ -156,23 +166,28 @@ Height
 <script>
 
 /* =========================
-   NODE GRAPH SYSTEM (REAL DATA FLOW)
+   NODE SYSTEM (REAL GRAPH)
 ========================= */
 
-let nodes = [];
+let nodes=[];
+let edges=[];
+let field=[];
 
 function addNode(type){
 
-  const n = document.createElement("div");
-  n.className = "node";
+  const n=document.createElement("div");
+  n.className="node";
 
-  n.style.left = Math.random()*300 + "px";
-  n.style.top = Math.random()*200 + "px";
+  n.style.left=Math.random()*300+"px";
+  n.style.top=Math.random()*200+"px";
 
-  n.innerHTML = type;
+  n.innerHTML=`
+    ${type}
+    <div class="port"></div>
+  `;
 
   document.getElementById("center").appendChild(n);
-  nodes.push({el:n,type:type,value:0});
+  nodes.push({el:n,type:type});
 
   drag(n);
 }
@@ -195,6 +210,7 @@ function drag(el){
     if(drag){
       el.style.left=(e.pageX-dx)+"px";
       el.style.top=(e.pageY-dy)+"px";
+      drawEdges();
     }
   };
 
@@ -202,30 +218,52 @@ function drag(el){
 }
 
 /* =========================
-   DATA FLOW ENGINE
+   NODE GRAPH EDGES (BASIC FLOW)
 ========================= */
 
-let field = [];
+function drawEdges(){
+
+  const svg=document.getElementById("cables");
+  svg.innerHTML="";
+
+  for(let i=0;i<nodes.length-1;i++){
+
+    let a=nodes[i].el.getBoundingClientRect();
+    let b=nodes[i+1].el.getBoundingClientRect();
+
+    let path=document.createElementNS("http://www.w3.org/2000/svg","path");
+
+    let d=`M ${a.left} ${a.top} C ${(a.left+b.left)/2} ${a.top}, ${(a.left+b.left)/2} ${b.top}, ${b.left} ${b.top}`;
+
+    path.setAttribute("d",d);
+    path.setAttribute("stroke","#555");
+    path.setAttribute("fill","none");
+
+    svg.appendChild(path);
+  }
+}
+
+/* =========================
+   COMPUTATION ENGINE (ARCHITECTURAL LOGIC)
+========================= */
 
 function compute(){
 
-  field = [];
+  field=[];
 
-  const density = +document.getElementById("density").value;
-  const force = +document.getElementById("force").value;
-  const height = +document.getElementById("height").value;
+  const density=+document.getElementById("density").value;
+  const force=+document.getElementById("force").value;
+  const height=+document.getElementById("height").value;
 
-  const size = 200;
+  const size=200;
 
   for(let x=0;x<size;x+=density){
     for(let y=0;y<size;y+=density){
 
       let px=x;
       let py=y;
-      let pz=0;
 
-      // ATTRACTOR LOGIC (DATA FLOW CORE)
-      let cx=100, cy=100;
+      let cx=100,cy=100;
 
       let dx=cx-px;
       let dy=cy-py;
@@ -236,70 +274,77 @@ function compute(){
       px+=dx*f*0.02;
       py+=dy*f*0.02;
 
-      pz=height*Math.sin(d*0.1);
+      let pz=height*Math.sin(d*0.1);
 
-      field.push([px,py,pz]);
+      field.push({x:px,y:py,z:pz});
     }
   }
 
-  render3D();
+  render();
 }
 
 /* =========================
-   3D ENGINE (WEBGL LIGHTWEIGHT)
+   3D MESH ENGINE (LIGHTWEIGHT)
 ========================= */
 
-let gl,ctx;
+function render(){
 
-const canvas=document.getElementById("gl");
-gl=canvas.getContext("webgl");
+  const c=document.getElementById("c");
+  const ctx=c.getContext("2d");
 
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
+  c.width=window.innerWidth;
+  c.height=window.innerHeight;
 
-/* minimal fake render (points cloud style) */
+  ctx.clearRect(0,0,c.width,c.height);
 
-function render3D(){
-
-  const ctx2d = canvas.getContext("2d");
-  ctx2d.clearRect(0,0,canvas.width,canvas.height);
-
-  ctx2d.fillStyle="#fff";
+  ctx.fillStyle="#ddd";
 
   field.forEach(p=>{
-    let x=p[0]*2;
-    let y=p[1]*2;
-    ctx2d.fillRect(x,y,2,2);
+    ctx.fillRect(p.x,p.y,2,2);
   });
 
 }
 
 /* =========================
-   EXPORT SYSTEM (FABRICATION READY)
+   FABRICATION EXPORT
 ========================= */
+
+function exportDXF(){
+
+  let data="DXF\n";
+
+  field.forEach(p=>{
+    data+=`POINT ${p.x},${p.y},${p.z}\n`;
+  });
+
+  download("model.dxf.txt",data);
+}
 
 function exportOBJ(){
 
   let obj="";
 
   field.forEach(p=>{
-    obj+=`v ${p[0]} ${p[1]} ${p[2]}\n`;
+    obj+=`v ${p.x} ${p.y} ${p.z}\n`;
   });
 
   download("model.obj",obj);
 }
 
 function exportJSON(){
-
-  download("system.json",JSON.stringify(field));
+  download("model.json",JSON.stringify(field));
 }
 
-function download(name,data){
-  const b=new Blob([data],{type:"text/plain"});
-  const u=URL.createObjectURL(b);
-  const a=document.createElement("a");
+/* =========================
+   DOWNLOAD
+========================= */
+
+function download(n,d){
+  let b=new Blob([d],{type:"text/plain"});
+  let u=URL.createObjectURL(b);
+  let a=document.createElement("a");
   a.href=u;
-  a.download=name;
+  a.download=n;
   a.click();
 }
 
