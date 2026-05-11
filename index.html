@@ -1,247 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Parametric Design System</title>
+<title>Computational Fabrication Lab</title>
 
 <style>
 
-/* =========================
-   BASE — ENGINEERING STYLE
-========================= */
-
 body{
   margin:0;
+  font-family: monospace;
   background:#0b0b0b;
-  color:#eaeaea;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-}
-
-/* =========================
-   LAYOUT (LIKE SOFTWARE UI)
-========================= */
-
-.app{
-  display:grid;
-  grid-template-columns:260px 1fr 320px;
+  color:#eee;
+  display:flex;
   height:100vh;
 }
 
 /* =========================
-   LEFT — NODE LIBRARY
+   NODE PANEL
 ========================= */
 
-.sidebar{
-  border-right:1px solid #1a1a1a;
-  padding:1.5rem;
+#left{
+  width:240px;
+  border-right:1px solid #222;
+  padding:10px;
 }
 
-.sidebar h1{
-  font-size:12px;
-  letter-spacing:0.3em;
-  color:#888;
-  margin-bottom:2rem;
-}
-
-.nodeItem{
+.nodeBtn{
+  border:1px solid #333;
   padding:8px;
   margin-bottom:6px;
-  border:1px solid #1a1a1a;
   cursor:pointer;
-  font-size:12px;
 }
 
-.nodeItem:hover{
+.nodeBtn:hover{
   background:#111;
 }
 
 /* =========================
-   CENTER — NODE CANVAS
+   CANVAS
 ========================= */
 
-.canvas{
+#center{
+  flex:1;
   position:relative;
-  overflow:hidden;
+}
+
+svg{
+  width:100%;
+  height:100%;
   background:#0b0b0b;
 }
 
-.node{
-  position:absolute;
-  width:140px;
+/* =========================
+   PARAMS
+========================= */
+
+#right{
+  width:260px;
+  border-left:1px solid #222;
   padding:10px;
-  border:1px solid #2a2a2a;
-  background:#111;
-  font-size:11px;
-  cursor:move;
 }
 
-.nodeTitle{
-  font-weight:bold;
-  margin-bottom:6px;
-}
-
-.port{
-  width:8px;
-  height:8px;
-  background:#888;
-  border-radius:50%;
-  position:absolute;
-}
-
-/* inputs / outputs */
-.in{ left:-4px; top:50%; transform:translateY(-50%); }
-.out{ right:-4px; top:50%; transform:translateY(-50%); }
-
-/* =========================
-   RIGHT — PARAMETERS PANEL
-========================= */
-
-.panel{
-  border-left:1px solid #1a1a1a;
-  padding:1.5rem;
-}
-
-.panel h2{
-  font-size:12px;
-  letter-spacing:0.3em;
-  color:#888;
-}
-
-.param{
-  margin-top:20px;
-  font-size:11px;
-}
-
-input[type="range"]{
+input{
   width:100%;
-}
-
-/* =========================
-   CONNECTION LINES
-========================= */
-
-svg{
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  pointer-events:none;
 }
 
 </style>
-
 </head>
 
 <body>
 
-<div class="app">
-
 <!-- LEFT -->
-<div class="sidebar">
+<div id="left">
 
-<h1>NODES</h1>
-
-<div class="nodeItem" onclick="addNode('Geometry')">Geometry</div>
-<div class="nodeItem" onclick="addNode('Divide Surface')">Divide Surface</div>
-<div class="nodeItem" onclick="addNode('Attractor Field')">Attractor Field</div>
-<div class="nodeItem" onclick="addNode('Extrude')">Extrude</div>
-<div class="nodeItem" onclick="addNode('Simulation')">Simulation</div>
+<div class="nodeBtn" onclick="addNode('GRID')">GRID</div>
+<div class="nodeBtn" onclick="addNode('ATTRACTOR')">ATTRACTOR</div>
+<div class="nodeBtn" onclick="addNode('SCALE')">SCALE</div>
+<div class="nodeBtn" onclick="generate()">GENERATE</div>
+<div class="nodeBtn" onclick="exportSVG()">EXPORT SVG</div>
 
 </div>
 
 <!-- CENTER -->
-<div class="canvas" id="canvas">
-
+<div id="center">
 <svg id="svg"></svg>
-
 </div>
 
 <!-- RIGHT -->
-<div class="panel">
+<div id="right">
 
-<h2>PARAMETERS</h2>
+<h3>PARAMETERS</h3>
 
-<div class="param">
 Density
-<input type="range" min="1" max="100" value="50">
-</div>
+<input id="density" type="range" min="5" max="40" value="20">
 
-<div class="param">
-Height
-<input type="range" min="1" max="200" value="80">
-</div>
+Attraction
+<input id="attraction" type="range" min="0" max="200" value="100">
 
-</div>
+Scale
+<input id="scale" type="range" min="1" max="20" value="8">
 
 </div>
 
 <script>
 
 /* =========================
-   NODE SYSTEM (GRASSHOPPER STYLE)
+   NODE SYSTEM (SIMPLIFIED GRASSHOPPER)
 ========================= */
-
-const canvas = document.getElementById("canvas");
 
 let nodes = [];
 
 function addNode(type){
-
-  const node = document.createElement("div");
-  node.className = "node";
-  node.style.left = Math.random()*500 + "px";
-  node.style.top = Math.random()*400 + "px";
-
-  node.innerHTML = `
-    <div class="nodeTitle">${type}</div>
-    <div class="port in"></div>
-    <div class="port out"></div>
-  `;
-
-  canvas.appendChild(node);
-  nodes.push(node);
-
-  makeDraggable(node);
+  nodes.push({type});
 }
 
 /* =========================
-   DRAG SYSTEM
+   COMPUTATION CORE
 ========================= */
 
-function makeDraggable(el){
+function generate(){
 
-  let offsetX, offsetY, dragging=false;
+  const svg = document.getElementById("svg");
+  svg.innerHTML = "";
 
-  el.onmousedown = (e)=>{
-    dragging=true;
-    offsetX = e.offsetX;
-    offsetY = e.offsetY;
-  };
+  const density = document.getElementById("density").value;
+  const attraction = document.getElementById("attraction").value;
+  const scale = document.getElementById("scale").value;
 
-  document.onmousemove = (e)=>{
-    if(dragging){
-      el.style.left = (e.pageX - offsetX) + "px";
-      el.style.top = (e.pageY - offsetY) + "px";
+  let points = [];
+
+  /* GRID */
+  for(let x=0;x<400;x+=density){
+    for(let y=0;y<400;y+=density){
+
+      let px = x;
+      let py = y;
+
+      /* ATTRACTOR */
+      const cx = 200;
+      const cy = 200;
+
+      let dx = cx - px;
+      let dy = cy - py;
+      let d = Math.sqrt(dx*dx + dy*dy);
+
+      let force = attraction / (d+1);
+
+      px += dx * force * 0.01;
+      py += dy * force * 0.01;
+
+      points.push({x:px, y:py});
     }
-  };
+  }
 
-  document.onmouseup = ()=>dragging=false;
+  /* DRAW */
+  points.forEach(p=>{
+
+    let rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+
+    rect.setAttribute("x",p.x);
+    rect.setAttribute("y",p.y);
+    rect.setAttribute("width",scale);
+    rect.setAttribute("height",scale);
+    rect.setAttribute("fill","#ddd");
+
+    svg.appendChild(rect);
+  });
+
 }
 
 /* =========================
-   INIT EXAMPLE GRAPH
+   EXPORT SVG (FABRICATION)
 ========================= */
 
-addNode("Geometry");
-addNode("Divide Surface");
-addNode("Extrude");
+function exportSVG(){
+
+  const svg = document.getElementById("svg");
+  const data = new XMLSerializer().serializeToString(svg);
+
+  const blob = new Blob([data], {type:"image/svg+xml"});
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "fabrication.svg";
+  a.click();
+}
 
 </script>
 
 </body>
-
 </html>
