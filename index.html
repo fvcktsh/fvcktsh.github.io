@@ -2,62 +2,42 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Studio OS v4 — Architectural Machine</title>
+<title>Studio Compiler OS</title>
 
 <style>
-
-/* =========================
-   CORE SYSTEM UI
-========================= */
-
 body{
   margin:0;
-  overflow:hidden;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  font-family: ui-monospace, monospace;
   background:#0b0b0b;
   color:#eaeaea;
+  overflow:hidden;
 }
-
-/* =========================
-   LAYOUT
-========================= */
 
 #app{
   display:grid;
-  grid-template-columns:260px 1fr 320px;
+  grid-template-columns:260px 1fr 300px;
   height:100vh;
 }
 
-/* =========================
-   LEFT — NODE LIBRARY
-========================= */
-
+/* LEFT */
 #left{
   border-right:1px solid #222;
   padding:10px;
 }
 
-.nodeBtn{
+.btn{
   padding:8px;
   border:1px solid #333;
   margin-bottom:6px;
   cursor:pointer;
 }
+.btn:hover{ background:#111; }
 
-.nodeBtn:hover{
-  background:#111;
-}
-
-/* =========================
-   CENTER — GRAPH + 3D
-========================= */
-
+/* CENTER */
 #center{
   position:relative;
-  overflow:hidden;
 }
 
-/* node */
 .node{
   position:absolute;
   width:140px;
@@ -65,51 +45,28 @@ body{
   background:#111;
   border:1px solid #333;
   cursor:move;
-  z-index:2;
 }
 
-/* canvas 3D */
-canvas{
-  position:absolute;
-  width:100%;
-  height:100%;
-  z-index:1;
-}
-
-/* cables */
-svg{
-  position:absolute;
-  width:100%;
-  height:100%;
-  z-index:3;
-  pointer-events:none;
-}
-
-/* ports */
-.port{
-  width:8px;
-  height:8px;
-  background:#888;
-  border-radius:50%;
-  position:absolute;
-}
-
-/* =========================
-   RIGHT PANEL
-========================= */
-
+/* RIGHT */
 #right{
   border-left:1px solid #222;
   padding:10px;
 }
 
-button, input{
+button{
   width:100%;
   margin-top:6px;
-  padding:6px;
+  padding:8px;
   background:#111;
-  color:#ddd;
   border:1px solid #333;
+  color:#fff;
+  cursor:pointer;
+}
+
+canvas{
+  position:absolute;
+  width:100%;
+  height:100%;
 }
 
 </style>
@@ -119,45 +76,30 @@ button, input{
 
 <div id="app">
 
-<!-- LEFT -->
+<!-- LEFT PANEL -->
 <div id="left">
 
-<div class="nodeBtn" onclick="addNode('GRID')">GRID</div>
-<div class="nodeBtn" onclick="addNode('ATTRACTOR')">ATTRACTOR</div>
-<div class="nodeBtn" onclick="addNode('SUBDIVIDE')">SUBDIVIDE</div>
-<div class="nodeBtn" onclick="addNode('EXTRUDE')">EXTRUDE</div>
+<div class="btn" onclick="addNode('GRID')">GRID</div>
+<div class="btn" onclick="addNode('ATTRACTOR')">ATTRACTOR</div>
+<div class="btn" onclick="addNode('EXTRUDE')">EXTRUDE</div>
 
-<button onclick="compute()">COMPUTE SYSTEM</button>
+<div class="btn" onclick="compile()">COMPILE</div>
 
 </div>
 
 <!-- CENTER -->
 <div id="center">
-
 <canvas id="c"></canvas>
-<svg id="cables"></svg>
-
 </div>
 
 <!-- RIGHT -->
 <div id="right">
 
-<h3>PARAMETERS</h3>
+<h3>EXPORT</h3>
 
-Density
-<input id="density" type="range" min="5" max="30" value="15">
-
-Force
-<input id="force" type="range" min="0" max="200" value="90">
-
-Height
-<input id="height" type="range" min="0" max="80" value="30">
-
-<h3>FABRICATION</h3>
-
-<button onclick="exportDXF()">EXPORT DXF</button>
-<button onclick="exportOBJ()">EXPORT OBJ</button>
 <button onclick="exportJSON()">EXPORT JSON</button>
+<button onclick="exportDXF()">EXPORT DXF</button>
+<button onclick="exportSTL()">EXPORT STL</button>
 
 </div>
 
@@ -166,28 +108,28 @@ Height
 <script>
 
 /* =========================
-   NODE SYSTEM (REAL GRAPH)
+   DATA MODEL
 ========================= */
 
-let nodes=[];
-let edges=[];
-let field=[];
+let nodes = [];
+let geometry = [];
+
+/* =========================
+   ADD NODE
+========================= */
 
 function addNode(type){
 
-  const n=document.createElement("div");
-  n.className="node";
+  const n = document.createElement("div");
+  n.className = "node";
+  n.innerHTML = type;
 
-  n.style.left=Math.random()*300+"px";
-  n.style.top=Math.random()*200+"px";
-
-  n.innerHTML=`
-    ${type}
-    <div class="port"></div>
-  `;
+  n.style.left = Math.random()*300+"px";
+  n.style.top = Math.random()*200+"px";
 
   document.getElementById("center").appendChild(n);
-  nodes.push({el:n,type:type});
+
+  nodes.push({type, el:n});
 
   drag(n);
 }
@@ -210,7 +152,6 @@ function drag(el){
     if(drag){
       el.style.left=(e.pageX-dx)+"px";
       el.style.top=(e.pageY-dy)+"px";
-      drawEdges();
     }
   };
 
@@ -218,65 +159,37 @@ function drag(el){
 }
 
 /* =========================
-   NODE GRAPH EDGES (BASIC FLOW)
+   COMPILER CORE
 ========================= */
 
-function drawEdges(){
+function compile(){
 
-  const svg=document.getElementById("cables");
-  svg.innerHTML="";
+  geometry = [];
 
-  for(let i=0;i<nodes.length-1;i++){
-
-    let a=nodes[i].el.getBoundingClientRect();
-    let b=nodes[i+1].el.getBoundingClientRect();
-
-    let path=document.createElementNS("http://www.w3.org/2000/svg","path");
-
-    let d=`M ${a.left} ${a.top} C ${(a.left+b.left)/2} ${a.top}, ${(a.left+b.left)/2} ${b.top}, ${b.left} ${b.top}`;
-
-    path.setAttribute("d",d);
-    path.setAttribute("stroke","#555");
-    path.setAttribute("fill","none");
-
-    svg.appendChild(path);
-  }
-}
-
-/* =========================
-   COMPUTATION ENGINE (ARCHITECTURAL LOGIC)
-========================= */
-
-function compute(){
-
-  field=[];
-
-  const density=+document.getElementById("density").value;
-  const force=+document.getElementById("force").value;
-  const height=+document.getElementById("height").value;
-
-  const size=200;
+  let size = 150;
+  let density = 10;
 
   for(let x=0;x<size;x+=density){
     for(let y=0;y<size;y+=density){
 
-      let px=x;
-      let py=y;
+      let px = x;
+      let py = y;
+      let pz = 0;
 
-      let cx=100,cy=100;
+      // simple attractor logic
+      let cx = 75, cy = 75;
 
-      let dx=cx-px;
-      let dy=cy-py;
+      let dx = cx - px;
+      let dy = cy - py;
 
-      let d=Math.sqrt(dx*dx+dy*dy);
-      let f=force/(d+1);
+      let d = Math.sqrt(dx*dx + dy*dy);
+      let f = 50/(d+1);
 
-      px+=dx*f*0.02;
-      py+=dy*f*0.02;
+      px += dx*f*0.02;
+      py += dy*f*0.02;
+      pz = Math.sin(d*0.1)*10;
 
-      let pz=height*Math.sin(d*0.1);
-
-      field.push({x:px,y:py,z:pz});
+      geometry.push([px,py,pz]);
     }
   }
 
@@ -284,67 +197,97 @@ function compute(){
 }
 
 /* =========================
-   3D MESH ENGINE (LIGHTWEIGHT)
+   RENDER
 ========================= */
 
 function render(){
 
-  const c=document.getElementById("c");
-  const ctx=c.getContext("2d");
+  const c = document.getElementById("c");
+  const ctx = c.getContext("2d");
 
-  c.width=window.innerWidth;
-  c.height=window.innerHeight;
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
 
   ctx.clearRect(0,0,c.width,c.height);
 
-  ctx.fillStyle="#ddd";
+  ctx.fillStyle="#fff";
 
-  field.forEach(p=>{
-    ctx.fillRect(p.x,p.y,2,2);
+  geometry.forEach(p=>{
+    ctx.fillRect(p[0],p[1],2,2);
   });
 
 }
 
 /* =========================
-   FABRICATION EXPORT
+   EXPORT SYSTEM
 ========================= */
+
+function exportJSON(){
+
+  download("geometry.json", JSON.stringify(geometry));
+}
 
 function exportDXF(){
 
-  let data="DXF\n";
+  let dxf = "0\nSECTION\n2\nENTITIES\n";
 
-  field.forEach(p=>{
-    data+=`POINT ${p.x},${p.y},${p.z}\n`;
+  geometry.forEach((p,i)=>{
+
+    if(i<geometry.length-1){
+
+      let a = geometry[i];
+      let b = geometry[i+1];
+
+      dxf += `
+0
+LINE
+10 ${a[0]}
+20 ${a[1]}
+30 0
+11 ${b[0]}
+21 ${b[1]}
+31 0
+`;
+    }
   });
 
-  download("model.dxf.txt",data);
+  dxf += "0\nENDSEC\n0\nEOF";
+
+  download("model.dxf", dxf);
 }
 
-function exportOBJ(){
+function exportSTL(){
 
-  let obj="";
+  let stl = "solid studio\n";
 
-  field.forEach(p=>{
-    obj+=`v ${p.x} ${p.y} ${p.z}\n`;
+  geometry.forEach(p=>{
+
+    stl += `
+facet normal 0 0 1
+outer loop
+vertex ${p[0]} ${p[1]} ${p[2]}
+vertex ${p[0]+1} ${p[1]} ${p[2]}
+vertex ${p[0]} ${p[1]+1} ${p[2]}
+endloop
+endfacet
+`;
   });
 
-  download("model.obj",obj);
-}
+  stl += "endsolid";
 
-function exportJSON(){
-  download("model.json",JSON.stringify(field));
+  download("model.stl", stl);
 }
 
 /* =========================
    DOWNLOAD
 ========================= */
 
-function download(n,d){
-  let b=new Blob([d],{type:"text/plain"});
-  let u=URL.createObjectURL(b);
-  let a=document.createElement("a");
+function download(name,data){
+  let b = new Blob([data],{type:"text/plain"});
+  let u = URL.createObjectURL(b);
+  let a = document.createElement("a");
   a.href=u;
-  a.download=n;
+  a.download=name;
   a.click();
 }
 
