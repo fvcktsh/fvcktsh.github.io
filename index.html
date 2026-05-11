@@ -1,298 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Studio Marty Vanderdonckt</title>
+<title>Parametric City 3D Lab</title>
 
 <style>
-
-/* =========================
-   BASE SYSTEM
-========================= */
-
-body{
-  margin:0;
-  background:#0a0a0a;
-  color:#f2f2f2;
-  font-family: Helvetica, Arial, sans-serif;
-  letter-spacing:0.01em;
-}
-
-/* =========================
-   HEADER / HERO
-========================= */
-
-.hero{
-  height:100vh;
-  display:flex;
-  flex-direction:column;
-  justify-content:flex-end;
-  padding:8vw;
-  border-bottom:1px solid #1c1c1c;
-}
-
-.hero h1{
-  font-size:4vw;
-  font-weight:200;
-  margin:0;
-}
-
-.hero p{
-  max-width:600px;
-  margin-top:2rem;
-  font-size:1.1rem;
-  line-height:1.6;
-  color:#b8b8b8;
-}
-
-/* =========================
-   NAV SYSTEM (studio feel)
-========================= */
-
-.nav{
+body { margin:0; overflow:hidden; background:#050505; font-family:Arial; }
+#ui {
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  display:flex;
-  justify-content:space-between;
-  padding:2rem 3rem;
-  font-size:0.75rem;
-  color:#888;
-  mix-blend-mode:difference;
-}
-
-/* =========================
-   SECTION TITLES
-========================= */
-
-.section{
-  padding:6vw 8vw;
-}
-
-.section-title{
-  font-size:0.75rem;
-  letter-spacing:0.25em;
-  color:#777;
-  margin-bottom:3rem;
-}
-
-/* =========================
-   GRID SYSTEM (ZHA style)
-========================= */
-
-.grid{
-  display:grid;
-  grid-template-columns:repeat(12, 1fr);
-  gap:1px;
-}
-
-/* =========================
-   PROJECT MODULES
-========================= */
-
-.project{
-  grid-column:span 6;
-  background:#111;
-  overflow:hidden;
-  transition:0.5s ease;
-  border:1px solid #161616;
-}
-
-.project:hover{
-  transform:translateY(-4px);
-  border-color:#2a2a2a;
-}
-
-.project img{
-  width:100%;
-  height:420px;
-  object-fit:cover;
-  filter:contrast(1.1) grayscale(0.1);
-}
-
-.project h2{
-  font-size:0.8rem;
-  font-weight:300;
-  letter-spacing:0.12em;
-  padding:1rem;
-  margin:0;
-  color:#e6e6e6;
-}
-
-/* full span architectural landmark */
-
-.project.large{
-  grid-column:span 12;
-}
-
-.project.large img{
-  height:650px;
-}
-
-/* =========================
-   RESEARCH BLOCKS
-========================= */
-
-.research{
-  display:grid;
-  grid-template-columns:repeat(3, 1fr);
-  gap:2rem;
-}
-
-.block{
-  border-top:1px solid #1a1a1a;
-  padding-top:2rem;
-}
-
-.block h3{
-  font-size:0.8rem;
+  top:20px;
+  left:20px;
+  color:#aaa;
+  z-index:10;
+  font-size:12px;
   letter-spacing:0.2em;
-  color:#888;
 }
-
-.block p{
-  color:#b5b5b5;
-  line-height:1.7;
-  font-size:0.95rem;
-}
-
-/* =========================
-   FOOTER
-========================= */
-
-.footer{
-  padding:8vw;
-  border-top:1px solid #1a1a1a;
-  color:#777;
-  font-size:0.9rem;
-}
-
-/* =========================
-   RESPONSIVE
-========================= */
-
-@media (max-width:900px){
-
-  .project{
-    grid-column:span 12;
-  }
-
-  .research{
-    grid-template-columns:1fr;
-  }
-
-  .hero h1{
-    font-size:2rem;
-  }
-
-}
-
 </style>
 
 </head>
 
 <body>
 
-<!-- NAV -->
-<div class="nav">
-  <div>STUDIO MARTY VANDERDONCKT</div>
-  <div>COMPUTATIONAL ARCHITECTURE / RESEARCH</div>
+<div id="ui">
+PARAMETRIC CITY / COMPUTATIONAL STUDIO<br>
+WASD + MOUSE TO NAVIGATE
 </div>
 
-<!-- HERO -->
-<section class="hero">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-<h1>
-COMPUTATIONAL DESIGN STUDIO
-</h1>
+<script>
 
-<p>
-Parametric systems, generative architecture and fabrication-driven research.
-We operate at the intersection of computation, material logic and spatial design.
-</p>
+/* =========================
+   SCENE SETUP
+========================= */
 
-</section>
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x050505, 50, 200);
 
-<!-- PROJECTS -->
-<section class="section">
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth/window.innerHeight,
+  0.1,
+  1000
+);
 
-<div class="section-title">
-SELECTED PROJECTS
-</div>
+camera.position.set(0,20,60);
 
-<div class="grid">
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-<div class="project large">
-  <img src="assets/img/project01.jpg">
-  <h2>MORPHOGENETIC SYSTEM — STRUCTURAL LOGICS</h2>
-</div>
+/* =========================
+   LIGHT
+========================= */
 
-<div class="project">
-  <img src="assets/img/project02.jpg">
-  <h2>PARAMETRIC FIELD STUDY</h2>
-</div>
+const light = new THREE.PointLight(0xffffff, 1);
+light.position.set(50,50,50);
+scene.add(light);
 
-<div class="project">
-  <img src="assets/img/project03.jpg">
-  <h2>GENERATIVE SKIN SYSTEM</h2>
-</div>
+/* =========================
+   CITY GENERATION
+========================= */
 
-<div class="project">
-  <img src="assets/img/project04.jpg">
-  <h2>COMPUTATIONAL RELIEF SURFACE</h2>
-</div>
+const buildings = [];
 
-</div>
+function createBuilding(x,z,type){
 
-</section>
+  const height = Math.random()*20 + 5;
 
-<!-- RESEARCH -->
-<section class="section">
+  const geometry = new THREE.BoxGeometry(2, height, 2);
 
-<div class="section-title">
-RESEARCH AREAS
-</div>
+  let color = 0x888888;
 
-<div class="research">
+  if(type==="project") color = 0xffffff;
+  if(type==="research") color = 0x6666ff;
+  if(type==="system") color = 0x66ff99;
 
-<div class="block">
-<h3>GEOMETRY SYSTEMS</h3>
-<p>
-Parametric modeling, recursive structures, spatial subdivision and rule-based geometry generation.
-</p>
-</div>
+  const material = new THREE.MeshStandardMaterial({
+    color:color,
+    wireframe:false
+  });
 
-<div class="block">
-<h3>MATERIAL LOGICS</h3>
-<p>
-Exploration of material behavior through computation, simulation and fabrication constraints.
-</p>
-</div>
+  const mesh = new THREE.Mesh(geometry, material);
 
-<div class="block">
-<h3>FABRICATION</h3>
-<p>
-CNC, 3D printing and robotic fabrication processes integrated into design development.
-</p>
-</div>
+  mesh.position.set(x, height/2, z);
 
-</div>
+  scene.add(mesh);
 
-</section>
+  buildings.push(mesh);
+}
 
-<!-- FOOTER -->
-<div class="footer">
+/* =========================
+   GENERATE CITY GRID
+========================= */
 
-fvcktsh — Computational Art design Arc
-hitecture Research  
-fvcktsh.github.io
+const types = ["project","research","system"];
 
-</div>
+for(let i=0;i<120;i++){
+
+  const x = (Math.random()-0.5)*200;
+  const z = (Math.random()-0.5)*200;
+
+  const type = types[Math.floor(Math.random()*3)];
+
+  createBuilding(x,z,type);
+}
+
+/* =========================
+   CAMERA CONTROLS SIMPLE
+========================= */
+
+let keys = {};
+
+document.addEventListener("keydown",(e)=>keys[e.key]=true);
+document.addEventListener("keyup",(e)=>keys[e.key]=false);
+
+function updateCamera(){
+
+  if(keys["w"]) camera.position.z -= 0.5;
+  if(keys["s"]) camera.position.z += 0.5;
+  if(keys["a"]) camera.position.x -= 0.5;
+  if(keys["d"]) camera.position.x += 0.5;
+
+}
+
+/* =========================
+   ANIMATION LOOP
+========================= */
+
+function animate(){
+
+  requestAnimationFrame(animate);
+
+  updateCamera();
+
+  /* subtle breathing motion (generative feel) */
+  buildings.forEach((b,i)=>{
+    b.position.y += Math.sin(Date.now()*0.001 + i)*0.01;
+  });
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+/* =========================
+   RESIZE
+========================= */
+
+window.addEventListener("resize",()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+</script>
 
 </body>
-
 </html>
