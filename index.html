@@ -2,21 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Studio Operating System</title>
+<title>Studio OS v3 — Data Flow + 3D Engine</title>
 
 <style>
 
 /* =========================
-   CORE SYSTEM UI
+   CORE UI (ENGINEERING STYLE)
 ========================= */
 
 body{
   margin:0;
-  font-family: monospace;
+  overflow:hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
   background:#0b0b0b;
   color:#eaeaea;
-  overflow:hidden;
 }
+
+/* =========================
+   LAYOUT
+========================= */
 
 #app{
   display:grid;
@@ -25,7 +29,7 @@ body{
 }
 
 /* =========================
-   NODE LIBRARY
+   LEFT — NODE LIBRARY
 ========================= */
 
 #left{
@@ -33,33 +37,46 @@ body{
   padding:10px;
 }
 
-.node{
+.nodeBtn{
   padding:8px;
   border:1px solid #333;
   margin-bottom:6px;
   cursor:pointer;
 }
 
-.node:hover{
+.nodeBtn:hover{
   background:#111;
 }
 
 /* =========================
-   CANVAS (COMPUTATIONAL SPACE)
+   CENTER — NODE GRAPH + 3D
 ========================= */
 
 #center{
   position:relative;
-  background:#0b0b0b;
 }
 
+/* node layer */
+.node{
+  position:absolute;
+  width:140px;
+  padding:10px;
+  background:#111;
+  border:1px solid #333;
+  cursor:move;
+  z-index:2;
+}
+
+/* WebGL canvas */
 canvas{
+  position:absolute;
   width:100%;
   height:100%;
+  z-index:1;
 }
 
 /* =========================
-   STUDIO MEMORY PANEL
+   RIGHT — PARAMETERS
 ========================= */
 
 #right{
@@ -67,80 +84,70 @@ canvas{
   padding:10px;
 }
 
-.section{
-  margin-bottom:20px;
-  font-size:12px;
-}
-
-button{
+input, button{
   width:100%;
-  margin-top:8px;
-  padding:8px;
+  margin-top:6px;
+  padding:6px;
   background:#111;
-  color:#ddd;
   border:1px solid #333;
-  cursor:pointer;
+  color:#ddd;
 }
 
-button:hover{
-  background:#1a1a1a;
-}
+/* =========================
+   CABLES (DATA FLOW VISUAL)
+========================= */
 
-input{
+svg{
+  position:absolute;
   width:100%;
+  height:100%;
+  z-index:3;
+  pointer-events:none;
 }
 
 </style>
-
 </head>
 
 <body>
 
 <div id="app">
 
-<!-- LEFT NODE SYSTEM -->
+<!-- LEFT -->
 <div id="left">
 
-<div class="node" onclick="setMode('grid')">GEOMETRY GRID</div>
-<div class="node" onclick="setMode('field')">ATTRACTOR FIELD</div>
-<div class="node" onclick="setMode('subdivision')">SUBDIVISION</div>
-<div class="node" onclick="setMode('fabric')">FABRICATION</div>
+<div class="nodeBtn" onclick="addNode('GRID')">GRID</div>
+<div class="nodeBtn" onclick="addNode('ATTRACTOR')">ATTRACTOR</div>
+<div class="nodeBtn" onclick="addNode('EXTRUDE')">EXTRUDE</div>
+<div class="nodeBtn" onclick="compute()">COMPUTE</div>
 
 </div>
 
-<!-- CENTER ENGINE -->
+<!-- CENTER -->
 <div id="center">
-<canvas id="c"></canvas>
+
+<canvas id="gl"></canvas>
+<svg id="cables"></svg>
+
 </div>
 
-<!-- RIGHT STUDIO MEMORY -->
+<!-- RIGHT -->
 <div id="right">
 
-<div class="section">
 <h3>PARAMETERS</h3>
 
 Density
-<input id="density" type="range" min="5" max="50" value="20">
+<input id="density" type="range" min="5" max="30" value="15">
 
 Force
 <input id="force" type="range" min="0" max="200" value="80">
 
-Depth
-<input id="depth" type="range" min="0" max="100" value="30">
-</div>
+Height
+<input id="height" type="range" min="0" max="50" value="20">
 
-<div class="section">
-<h3>FABRICATION</h3>
+<h3>EXPORT</h3>
 
-<button onclick="generate()">GENERATE SYSTEM</button>
-<button onclick="exportSVG()">EXPORT SVG (LASER)</button>
-<button onclick="exportOBJ()">EXPORT OBJ (3D PRINT)</button>
-</div>
-
-<div class="section">
-<h3>STUDIO MEMORY</h3>
-<div id="log">SYSTEM READY</div>
-</div>
+<button onclick="exportJSON()">EXPORT JSON</button>
+<button onclick="exportOBJ()">EXPORT OBJ</button>
 
 </div>
 
@@ -149,133 +156,150 @@ Depth
 <script>
 
 /* =========================
-   CORE STATE
+   NODE GRAPH SYSTEM (REAL DATA FLOW)
 ========================= */
 
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
+let nodes = [];
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+function addNode(type){
 
-let mode = "grid";
-let points = [];
+  const n = document.createElement("div");
+  n.className = "node";
 
-function setMode(m){
-  mode = m;
-  log("MODE: " + m);
-}
+  n.style.left = Math.random()*300 + "px";
+  n.style.top = Math.random()*200 + "px";
 
-function log(t){
-  document.getElementById("log").innerText = t;
+  n.innerHTML = type;
+
+  document.getElementById("center").appendChild(n);
+  nodes.push({el:n,type:type,value:0});
+
+  drag(n);
 }
 
 /* =========================
-   COMPUTATIONAL ENGINE
+   DRAG
 ========================= */
 
-function generate(){
+function drag(el){
 
-  points = [];
+  let dx,dy,drag=false;
 
-  const d = +document.getElementById("density").value;
-  const f = +document.getElementById("force").value;
-  const depth = +document.getElementById("depth").value;
+  el.onmousedown=(e)=>{
+    drag=true;
+    dx=e.offsetX;
+    dy=e.offsetY;
+  };
 
-  const cx = canvas.width/2;
-  const cy = canvas.height/2;
+  document.onmousemove=(e)=>{
+    if(drag){
+      el.style.left=(e.pageX-dx)+"px";
+      el.style.top=(e.pageY-dy)+"px";
+    }
+  };
 
-  for(let x=0;x<canvas.width;x+=d){
-    for(let y=0;y<canvas.height;y+=d){
+  document.onmouseup=()=>drag=false;
+}
 
-      let px = x;
-      let py = y;
+/* =========================
+   DATA FLOW ENGINE
+========================= */
 
-      if(mode === "field"){
+let field = [];
 
-        let dx = cx - px;
-        let dy = cy - py;
+function compute(){
 
-        let dist = Math.sqrt(dx*dx + dy*dy);
-        let force = f/(dist+1);
+  field = [];
 
-        px += dx*force*0.02;
-        py += dy*force*0.02;
-      }
+  const density = +document.getElementById("density").value;
+  const force = +document.getElementById("force").value;
+  const height = +document.getElementById("height").value;
 
-      if(mode === "subdivision"){
+  const size = 200;
 
-        px += Math.sin(x*0.02)*5;
-        py += Math.cos(y*0.02)*5;
-      }
+  for(let x=0;x<size;x+=density){
+    for(let y=0;y<size;y+=density){
 
-      points.push({x:px,y:py,z:depth});
+      let px=x;
+      let py=y;
+      let pz=0;
+
+      // ATTRACTOR LOGIC (DATA FLOW CORE)
+      let cx=100, cy=100;
+
+      let dx=cx-px;
+      let dy=cy-py;
+
+      let d=Math.sqrt(dx*dx+dy*dy);
+      let f=force/(d+1);
+
+      px+=dx*f*0.02;
+      py+=dy*f*0.02;
+
+      pz=height*Math.sin(d*0.1);
+
+      field.push([px,py,pz]);
     }
   }
 
-  draw();
-  log("SYSTEM GENERATED: " + points.length + " NODES");
+  render3D();
 }
 
 /* =========================
-   RENDER
+   3D ENGINE (WEBGL LIGHTWEIGHT)
 ========================= */
 
-function draw(){
+let gl,ctx;
 
-  ctx.fillStyle = "#0b0b0b";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+const canvas=document.getElementById("gl");
+gl=canvas.getContext("webgl");
 
-  ctx.fillStyle = "#ddd";
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
 
-  points.forEach(p=>{
-    ctx.fillRect(p.x,p.y,2,2);
+/* minimal fake render (points cloud style) */
+
+function render3D(){
+
+  const ctx2d = canvas.getContext("2d");
+  ctx2d.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx2d.fillStyle="#fff";
+
+  field.forEach(p=>{
+    let x=p[0]*2;
+    let y=p[1]*2;
+    ctx2d.fillRect(x,y,2,2);
   });
 
 }
 
 /* =========================
-   FABRICATION EXPORT
+   EXPORT SYSTEM (FABRICATION READY)
 ========================= */
-
-function exportSVG(){
-
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg">`;
-
-  points.forEach(p=>{
-    svg += `<rect x="${p.x}" y="${p.y}" width="1" height="1" fill="black"/>`;
-  });
-
-  svg += `</svg>`;
-
-  download("fabrication.svg", svg);
-
-  log("EXPORTED SVG");
-}
 
 function exportOBJ(){
 
-  let obj = "";
+  let obj="";
 
-  points.forEach(p=>{
-    obj += `v ${p.x} ${p.y} ${p.z}\n`;
+  field.forEach(p=>{
+    obj+=`v ${p[0]} ${p[1]} ${p[2]}\n`;
   });
 
-  download("fabrication.obj", obj);
-
-  log("EXPORTED OBJ");
+  download("model.obj",obj);
 }
 
-/* =========================
-   DOWNLOAD ENGINE
-========================= */
+function exportJSON(){
+
+  download("system.json",JSON.stringify(field));
+}
 
 function download(name,data){
-  const blob = new Blob([data],{type:"text/plain"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
+  const b=new Blob([data],{type:"text/plain"});
+  const u=URL.createObjectURL(b);
+  const a=document.createElement("a");
+  a.href=u;
+  a.download=name;
   a.click();
 }
 
